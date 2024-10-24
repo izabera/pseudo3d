@@ -8,7 +8,7 @@ gamesetup () {
         trap 'printf \\e[?%s 1049l 25h; exitfunc' exit
         get_term_size() {
             printf '\e[%s' '9999;9999H'
-            IFS='[;' read -sdR -p $'\e[6n' _ LINES COLUMNS
+            IFS='[;' read -srdR -p $'\e[6n' _ LINES COLUMNS
             __winch=0
         }
         get_term_size
@@ -24,12 +24,15 @@ gamesetup () {
     FRAME=-1
     __start=${EPOCHREALTIME/.}
     nextframe() {
-        local deadline waittime=$((1000000/${FPS-60})) now sleep
+        local deadline wait=$((1000000/${FPS:=60})) now sleep
+        if (( SKIPPED = 0, (now=${EPOCHREALTIME/.}) >= (deadline = __start + ++FRAME * wait) )); then
+            # you fucked up, your game logic can't run at $FPS
+            (( deadline = __start + (FRAME += (SKIPPED = (now - deadline) / wait )) * wait ))
+        fi
         INPUT=
-        (( deadline = __start + ++FRAME * waittime ))
         while (( (now=${EPOCHREALTIME/.}) < deadline )); do
             printf -v sleep 0.%06d "$((deadline-now))"
-            IFS= read -t "$sleep" -n1 -d '' -s
+            IFS= read -t "$sleep" -n1 -d '' -sr
             INPUT+=$REPLY
         done
         if ((__term)); then
@@ -41,12 +44,14 @@ gamesetup () {
 
 
 gamesetup
-exitfunc () { declare -p FRAME totalinput; } # example, not actually required
+exitfunc () { declare -p FPS FRAME totalinput totalskipped; } # example, not actually required
 while nextframe; do
     # current state:
-    # - we waited up to 1/$FPS seconds (defaults to 60fps)
+    # - FPS is set (defaults to 60pfs)
     # - we are drawing frame $FRAME
-    # - any input read in the previous frame is available in $INPUT
+    # - we waited exactly up to the next frame deadline
+    # - if your game logic took too long, $SKIPPED frames have been skipped
+    # - any input read since the previous frame is available in $INPUT
     # - if stdout is a terminal
     #   - we are in the alternate screen
     #   - the screen is clear
@@ -62,5 +67,6 @@ while nextframe; do
 
     # example
     totalinput+=$INPUT
-    declare -p FRAME INPUT COLUMNS LINES
+    ((totalskipped+=SKIPPED))
+    declare -p FPS FRAME INPUT COLUMNS LINES SKIPPED
 done
