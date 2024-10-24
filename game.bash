@@ -30,10 +30,10 @@ gamesetup () {
             (( deadline = __start + (FRAME += (SKIPPED = (now - deadline) / wait )) * wait ))
         fi
         INPUT=
-        while (( (now=${EPOCHREALTIME/.}) < deadline )); do
+        while (( now < deadline )); do
             printf -v sleep 0.%06d "$((deadline-now))"
             read -t "$sleep" -n1 -d '' -sr
-            INPUT+=$REPLY
+            INPUT+=$REPLY now=${EPOCHREALTIME/.}
         done
         if ((__term)); then
             if ((__winch)); then get_term_size; fi
