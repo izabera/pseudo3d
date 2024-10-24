@@ -13,7 +13,7 @@ gamesetup () {
         }
         get_term_size
         trap __winch=1 WINCH
-        exitfunc() { :; } # override this
+        exitfunc() { :; } # override this if you want something done at exit
         __term=1
     else
         # maybe just exit here
@@ -41,7 +41,7 @@ gamesetup () {
 
 
 gamesetup
-exitfunc () { declare -p FRAME totalinput; } # example
+exitfunc () { declare -p FRAME totalinput; } # example, not actually required
 while nextframe; do
     # current state:
     # - we waited up to 1/$FPS seconds (defaults to 60fps)
@@ -54,7 +54,7 @@ while nextframe; do
     #   - the cursor is at column 1 line 1
     #   - the cursor is invisible
     # - else
-    #   - COLUMNS=80 LINES=24
+    #   - COLUMNS=80 LINES=24 (or whatever you've set them to in some previous frame)
 
 
     # write your main loop here
