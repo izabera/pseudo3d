@@ -32,7 +32,7 @@ gamesetup () {
         INPUT=
         while (( (now=${EPOCHREALTIME/.}) < deadline )); do
             printf -v sleep 0.%06d "$((deadline-now))"
-            IFS= read -t "$sleep" -n1 -d '' -sr
+            read -t "$sleep" -n1 -d '' -sr
             INPUT+=$REPLY
         done
         if ((__term)); then
