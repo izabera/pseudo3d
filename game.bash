@@ -1,15 +1,25 @@
 #!/bin/bash
 
+pi=314159
+scale=100000
+pisq=98696044010
+pi2=628318
+pi_2=157079
+pi_4=78540
+cos () ((REPLY=((pisq-4*$1**2)*scale)/(pisq+$1**2)))
+atan() ((x=$1,REPLY=(pi_4*x-(x*(x-scale)*(24470+6630*x/scale)/scale))/scale))
+
 LANG=C
 # for the basic bash game loop: https://gist.github.com/izabera/5e0cc5fcd598f866eb7c6cc955ef3409
 
 FPS=30
 
-shopt -s extglob globasciiranges
+shopt -s extglob globasciiranges expand_aliases
 gamesetup () {
+    stty -echo
     # save cursor pos -> alt screen -> hide cursor -> go to 1;1 -> delete screen
     printf '\e7\e[?1049h\e[?25l\e[H\e[J'
-    exitfunc () { printf '\e[?25h\e[?1049l\e[m\e8' >/dev/tty; }
+    exitfunc () { printf '\e[?25h\e[?1049l\e[m\e8' >/dev/tty; stty echo; }
     trap exitfunc exit
 
     # size-dependent vars
@@ -51,13 +61,13 @@ gamesetup () {
 
     nextframe() {
         local deadline wait=$((1000000/${FPS:=60})) now sleep
-        if (( SKIPPED = 0, (now=${EPOCHREALTIME/.}) >= (deadline = __start + ++FRAME * wait) )); then
+        if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=__start+ ++FRAME*wait))); then
             # you fucked up, your game logic can't run at $FPS
-            (( deadline = __start + (FRAME += (SKIPPED = (now - deadline) / wait )) * wait ))
+            ((deadline=__start+(FRAME+=(SKIPPED=(now-deadline)/wait))*wait))
         fi
-        while (( now < deadline )); do
+        while ((now<deadline)); do
             printf -v sleep 0.%06d "$((deadline-now))"
-            read -t "$sleep" -n1 -d '' -sr
+            read -t "$sleep" -n1 -d '' -r
             __input+=$REPLY now=${EPOCHREALTIME/.}
         done
         INPUT=()
@@ -65,12 +75,14 @@ gamesetup () {
             case $__input in
                 [$' \t\n\r\b\177']*) INPUT+=("${__keys[${__input::1}]}") __input=${input:1} ;;
                 [[:alnum:][:punct:]]*) INPUT+=("${__input::1}") __input=${__input:1} ;;
-                $'\e'[[O][ABCD]*) INPUT+=("${__keys[${__input:2:1}]}") __input=${__input:3} ;; # arrow keys
-                $'\e['*([0-?])*([ -/])[@-~]*) __input=${__input##$'\e['*([0-?])*([ -/])[@-~]} ;; # unsupported csi sequence
-                $'\e'?('[')) break ;; # assume incomplete csi, hopefully it will be resolved by the next read
-                $'\e'[^[]*) __input=${__input::2} ;; # something went super wrong and we got an unrecognised sequence
-                [[:ascii:]]*) __input=${__input::1} ;; # something went even more wrong and we got some weird ctrl character
-                *) break ;; # maybe incomplete unicode character
+                $'\e'*) # handle this separately to avoid making the top level case slower for no reason
+                    case $__input in
+                    $'\e'[[O][ABCD]*) INPUT+=("${__keys[${__input:2:1}]}") __input=${__input:3} ;; # arrow keys
+                    $'\e['*([0-?])*([ -/])[@-~]*) __input=${__input##$'\e['*([0-?])*([ -/])[@-~]} ;; # unsupported csi sequence
+                    $'\e'?('[')) break ;; # assume incomplete csi, hopefully it will be resolved by the next read
+                    $'\e'[^[]*) __input=${__input::2} ;; # something went super wrong and we got an unrecognised sequence
+                    esac ;;
+                *) __input=${__input::1} # this was some non ascii unicode character (unsupported for now) or some weird ctrl character
             esac
         done
         if ((__term)); then
@@ -100,12 +112,19 @@ drawborder () {
 }
 drawbg () {
     local i
-    for ((i=0;i<rows/2;i++)) do
-        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$sky" "$hspaces"
+    for ((i=0;i<rows;i++)) do
+        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$black" "$hspaces"
     done
-    for ((;i<rows;i++)) do
-        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$grass" "$hspaces"
-    done
+    #for ((i=0;i<rows/2;i++)) do
+    #    printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$sky" "$hspaces"
+    #done
+    #if ((rows%2==1)); then
+    #    printf '\e[%d;2H\e[38;5;%s;48;5;%sm%s' "$((i+2))" "$sky" "$grass" "${hspaces// /▀}"
+    #    ((i++))
+    #fi
+    #for ((;i<rows;i++)) do
+    #    printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$grass" "$hspaces"
+    #done
 }
 # dumb function that doesn't know where the horizon is
 # two versions because one case is painful
@@ -157,27 +176,66 @@ info () { printf -v 'msgs[msg++]' '\e[34m%(%T)T [INFO]: %s\e[m' -1 "$1"; }
 
 TIMEFORMAT=%R
 
-gamesetup
-info "${cols}x$((rows*2)) calc:${calc}s draw:${draw}s"
-while nextframe; do
-    { time {
-        r=$RANDOM
-        columns=()
-        for ((i=0;i<cols;i++)) do
-            columns+=("$((((r+i)%216)+16))" "$(((i%17)))")
-        done
-    } } 2>time
-    ((totalskipped+=SKIPPED))
-    read -r calc < time
 
-    {
-    { time {
-        drawborder
-        #drawbg
-        drawcols
-    }; } 2>time
-    read -r draw < time
-    info "${cols}x$((rows*2)) calc:${calc}s draw:${draw}s fps goal:$FPS skipped:$totalskipped"
+gamesetup
+#info "${cols}x$((rows*2)) calc:${calc}s draw:${draw}s"
+
+drawpx() {
+    printf '\e[%s;%sH\e[38;5;%s;48;5;%sm▀\e[m' "$(($1/2+1))" "$(($2+1))" "$(($1%2?16:196))" "$(($1%2?196:16))"
+}
+cx=$rows cy=$((cols/2)) angle=0 len=10
+drawpx $rows $((cols/2))
+alias timedebug=${NOTIMEDEBUG+#}
+while nextframe; do
+    ((totalskipped+=SKIPPED))
+
+    drawborder
+    #printf '\e[%s;%sH\e[m ' "$((px/2+1))" "$((py+1))"
+    for k in "${INPUT[@]}"; do
+        case $k in
+            q) break 2 ;;
+            #UP|[wW]) ((px-=px>2)) ;;
+            #DOWN|[sS]) ((px+=px<=rows*2)) ;;
+            #LEFT|[aA]) ((py-=py>1)) ;;
+            #RIGHT|[dD]) ((py+=py<cols)) ;;
+            LEFT)  ((angle+=scale/20,angle>=pi2&&(angle-=pi2))) ;;
+            RIGHT) ((angle-=scale/20,angle<0&&(angle+=pi2))) ;;
+            UP) ((len+=len<20)) ;;
+            DOWN) ((len-=len>1)) ;;
+        esac
+    done
+    #printf '\e[%s;%sH\e[41m \e[m' "$((px/2+1))" "$((py+1))"
+
+    case $((angle/pi_2)) in
+        0) cos "$angle"; cos=$REPLY; cos "$((-angle+pi_2))"; sin=$REPLY ;;
+        1) cos "$((pi-angle))"; cos=$((-REPLY)); cos "$((angle-pi_2))"; sin=$REPLY ;;
+        2) cos "$((angle-pi))"; cos=$((-REPLY)); cos "$((pi_2*3-angle))"; sin=$((-REPLY)) ;;
+        3) cos "$((angle-pi2))"; cos=$REPLY; cos "$((pi_2*3-angle))"; sin=$((-REPLY)) ;;
+    esac
+    drawbg
+    drawpx $cx $cy
+    drawpx $((px=cx+len*cos/scale)) $((py=cy+len*sin/scale))
+    info "angle=$angle sin=$sin cos=$cos px=$px py=$py len=$len "
     drawmsgs
-    } > buffered; read -rd '' < buffered; printf '%s' "$REPLY"
+
+    #timedebug { time {
+    #    r=$RANDOM
+    #    columns=()
+    #    for ((i=0;i<cols;i++)) do
+    #        columns+=("$((((r+i)%216)+16))" "$(((i%17)+27))")
+    #    done
+    #timedebug } } 2>time
+    #timedebug read -r calc < time
+
+    #{
+    #timedebug { time {
+    #    drawborder
+    #    #drawbg
+    #    drawcols
+    #timedebug }; } 2>time
+    #timedebug read -r draw < time
+    #timedebug info "${cols}x$((rows*2)) calc:${calc}s draw:${draw}s fps goal:$FPS skipped:$totalskipped"
+    #drawmsgs
+    #} > buffered; read -rd '' < buffered; printf '%s' "$REPLY"
+
 done
