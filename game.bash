@@ -1,5 +1,8 @@
 #!/bin/bash
 
+hues=(196 197 198 199 200 201 165 129 93 57 21 27 33 39 45 51 50 49 48 47 46 82 118 154 190 226 220 214 208 202)
+
+
 pi=314159
 scale=100000
 pisq=98696044010
@@ -8,6 +11,53 @@ pi_2=157079
 pi_4=78540
 cos () ((REPLY=((pisq-4*$1**2)*scale)/(pisq+$1**2)))
 atan() ((x=$1,REPLY=(pi_4*x-(x*(x-scale)*(24470+6630*x/scale)/scale))/scale))
+sincos ()
+    case $(($1/pi_2)) in
+        0) cos "$1"; cos=$REPLY; cos "$((-$1+pi_2))"; sin=$REPLY ;;
+        1) cos "$((pi-$1))"; cos=$((-REPLY)); cos "$(($1-pi_2))"; sin=$REPLY ;;
+        2) cos "$(($1-pi))"; cos=$((-REPLY)); cos "$((pi_2*3-$1))"; sin=$((-REPLY)) ;;
+        3) cos "$(($1-pi2))"; cos=$REPLY; cos "$((pi_2*3-$1))"; sin=$((-REPLY)) ;;
+    esac
+
+map=(
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 2 2 2 2 2 0 0 0 0 3 0 3 0 3 0 0 0 1
+    1 0 0 0 0 0 2 0 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 2 0 0 0 2 0 0 0 0 3 0 0 0 3 0 0 0 1
+    1 0 0 0 0 0 2 0 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 2 2 0 2 2 0 0 0 0 3 0 3 0 3 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 4 4 4 4 4 4 4 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 4 0 4 0 0 0 0 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 4 0 0 0 0 5 0 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 4 0 4 0 0 0 0 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 4 0 4 4 4 4 4 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 4 4 4 4 4 4 4 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+)
+
+# horrible horrible horrible horrible
+hit='sideDistX<sideDistY?
+     (sideDistX+=deltaDistX,mapX+=stepX,side=0):
+     (sideDistY+=deltaDistY,mapY+=stepY,side=1),
+     map[mapX/scale*mapw+mapY/scale]>0?1:hit'
+mapw=24 maph=24
+posX=22 posY=12
+dirX=-100000 dirY=0
+planeX=0 planeY=66000
+((cameraX=200000*x/mapw-1))
+((rayDirX=dirX+planeX*cameraX))
+((rayDirY=dirY+planeY*cameraX))
 
 LANG=C
 # for the basic bash game loop: https://gist.github.com/izabera/5e0cc5fcd598f866eb7c6cc955ef3409
@@ -57,13 +107,13 @@ gamesetup () {
         [$'\n']=ENTER [$'\r']=ENTER
         [$'\177']=BACKSLASH [$'\b']=BACKSLASH
     )
-    FRAME=-1 __start=${EPOCHREALTIME/.}
+    FRAME=0 __start=${EPOCHREALTIME/.}
 
     nextframe() {
         local deadline wait=$((1000000/${FPS:=60})) now sleep
         if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=__start+ ++FRAME*wait))); then
             # you fucked up, your game logic can't run at $FPS
-            ((deadline=__start+(FRAME+=(SKIPPED=(now-deadline)/wait))*wait))
+            ((deadline=__start+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait))
         fi
         while ((now<deadline)); do
             printf -v sleep 0.%06d "$((deadline-now))"
@@ -181,12 +231,31 @@ gamesetup
 #info "${cols}x$((rows*2)) calc:${calc}s draw:${draw}s"
 
 drawpx() {
-    printf '\e[%s;%sH\e[38;5;%s;48;5;%sm▀\e[m' "$(($1/2+1))" "$(($2+1))" "$(($1%2?16:196))" "$(($1%2?196:16))"
+    drawn[$1*cols+$2]=$((${3-196}-16))
+    printf '\e[%s;%sH\e[38;5;%s;48;5;%sm▀\e[m' \
+        "$(($1/2+1))" "$(($2+1))" \
+        "$((drawn[($1&-2)*cols+$2]+16))" \
+        "$((drawn[(($1&-2)+1)*cols+$2]+16))"
 }
 cx=$rows cy=$((cols/2)) angle=0 len=10
-drawpx $rows $((cols/2))
+mx=$((mapw/2*scale)) my=$((maph/2*scale))
+p0x=$((mx*scale)) p0y=$((cy*scale))
+drawmappx () {
+    drawpx "$((cx-mapw+$1*2))"   "$((cy-maph+$2*2))"   "$3"
+    drawpx "$((cx-mapw+$1*2))"   "$((cy-maph+$2*2+1))" "$3"
+    drawpx "$((cx-mapw+$1*2+1))" "$((cy-maph+$2*2))"   "$3"
+    drawpx "$((cx-mapw+$1*2+1))" "$((cy-maph+$2*2+1))" "$3"
+}
+drawmap () {
+    for ((mapi=0;mapi<mapw;mapi++)) do
+        for ((mapj=0;mapj<maph;mapj++)) do
+            drawmappx "$mapi" "$mapj" "${map[mapi*mapw+mapj]}"
+        done
+    done
+}
 alias timedebug=${NOTIMEDEBUG+#}
 while nextframe; do
+    drawn=()
     ((totalskipped+=SKIPPED))
 
     drawborder
@@ -200,23 +269,46 @@ while nextframe; do
             #RIGHT|[dD]) ((py+=py<cols)) ;;
             LEFT)  ((angle+=scale/20,angle>=pi2&&(angle-=pi2))) ;;
             RIGHT) ((angle-=scale/20,angle<0&&(angle+=pi2))) ;;
-            UP) ((len+=len<20)) ;;
-            DOWN) ((len-=len>1)) ;;
+            #UP) ((len+=len<${#hues[@]})) ;;
+            #DOWN) ((len-=len>-${#hues[@]})) ;;
+            UP)   ((tx=((mx+cos)/scale),ty=((my+sin)/scale),map[tx*mapw+ty]==0&&(mx+=cos,my+=sin)));;
+            DOWN) ((tx=((mx-cos)/scale),ty=((my-sin)/scale),map[tx*mapw+ty]==0&&(mx-=cos,my-=sin)));;
+            #DOWN) ((p0x-=cos,p0y-=sin));;
         esac
     done
     #printf '\e[%s;%sH\e[41m \e[m' "$((px/2+1))" "$((py+1))"
 
-    case $((angle/pi_2)) in
-        0) cos "$angle"; cos=$REPLY; cos "$((-angle+pi_2))"; sin=$REPLY ;;
-        1) cos "$((pi-angle))"; cos=$((-REPLY)); cos "$((angle-pi_2))"; sin=$REPLY ;;
-        2) cos "$((angle-pi))"; cos=$((-REPLY)); cos "$((pi_2*3-angle))"; sin=$((-REPLY)) ;;
-        3) cos "$((angle-pi2))"; cos=$REPLY; cos "$((pi_2*3-angle))"; sin=$((-REPLY)) ;;
-    esac
+    sincos "$angle"
+    {
     drawbg
-    drawpx $cx $cy
-    drawpx $((px=cx+len*cos/scale)) $((py=cy+len*sin/scale))
-    info "angle=$angle sin=$sin cos=$cos px=$px py=$py len=$len "
+    drawmap
+    #drawpx 10 10 10
+    #for ((i=0;i<10;i++)) do
+    #    drawpx "$((cx+i))" $((cy+i)) 10
+    #    drawpx "$((cx-i))" $((cy-i)) 20
+    #done
+    #((p1x=p0x+len*cos/scale,p1y=p0y+len*sin/scale))
+    q=0
+    #drawpx "$p0x" "$p0y" "${hues[q++%${#hues[@]}]}"
+    dir=$((len>0?1:-1))
+    for ((i=0;i!=len;i+=dir)) do
+        drawpx "$((cx-mapw+mx*2/scale+i*cos/scale))" "$((cy-maph+my*2/scale+i*sin/scale))" "${hues[i*${#hues[@]}/len]}"
+        #drawpx "$(((p0x+i*cos)/scale))" "$(((p0y+i*sin)/scale))" "${hues[i*${#hues[@]}/len]}"
+        #drawpx "$p0x" "$p0y" "${hues[q++%${#hues[@]}]}"
+    done
+
+    #drawpx "$((cx-mapw+mx/scale*2))" "$((cy-mapw+my/scale*2))" "$sky"
+    #drawpx "$((cx-mapw+mx/scale*2))" "$((cy-mapw+my/scale*2+1))" "$sky"
+    #drawpx "$((cx-mapw+mx/scale*2+1))" "$((cy-mapw+my/scale*2))" "$sky"
+    #drawpx "$((cx-mapw+mx/scale*2+1))" "$((cy-mapw+my/scale*2+1))" "$sky"
+    drawmappx "$((mx/scale))" "$((my/scale))" "$sky"
+    info "angle=$angle FRAME=$FRAME totalskipped=$totalskipped mx=$mx my=$my ${INPUT[*]}"
     drawmsgs
+    } > buffered
+    read -rd '' < buffered
+    printf '%s' "$REPLY"
+
+    #drawpx "$((px=cx+len*cos/scale))" "$((py=cy+len*sin/scale))" $grey
 
     #timedebug { time {
     #    r=$RANDOM
@@ -239,3 +331,5 @@ while nextframe; do
     #} > buffered; read -rd '' < buffered; printf '%s' "$REPLY"
 
 done
+
+
