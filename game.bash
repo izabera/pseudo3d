@@ -247,11 +247,18 @@ drawmappx () {
     drawpx "$((cx-mapw+$1*2+1))" "$((cy-maph+$2*2+1))" "$3"
 }
 drawmap () {
-    for ((mapi=0;mapi<mapw;mapi++)) do
-        for ((mapj=0;mapj<maph;mapj++)) do
+    for ((mapi=0;mapi<maph;mapi++)) do
+        for ((mapj=0;mapj<mapw;mapj++)) do
             drawmappx "$mapi" "$mapj" "${map[mapi*mapw+mapj]}"
         done
     done
+}
+drawray () {
+    dir=$((len>0?1:-1))
+    for ((i=0;i!=len;i+=dir)) do
+        drawpx "$((cx-mapw+mx*2/scale+i*cos/scale))" "$((cy-maph+my*2/scale+i*sin/scale))" "${hues[i*${#hues[@]}/len]}"
+    done
+    drawmappx "$((mx/scale))" "$((my/scale))" "$sky"
 }
 alias timedebug=${NOTIMEDEBUG+#}
 while nextframe; do
@@ -263,73 +270,23 @@ while nextframe; do
     for k in "${INPUT[@]}"; do
         case $k in
             q) break 2 ;;
-            #UP|[wW]) ((px-=px>2)) ;;
-            #DOWN|[sS]) ((px+=px<=rows*2)) ;;
-            #LEFT|[aA]) ((py-=py>1)) ;;
-            #RIGHT|[dD]) ((py+=py<cols)) ;;
             LEFT)  ((angle+=scale/20,angle>=pi2&&(angle-=pi2))) ;;
             RIGHT) ((angle-=scale/20,angle<0&&(angle+=pi2))) ;;
-            #UP) ((len+=len<${#hues[@]})) ;;
-            #DOWN) ((len-=len>-${#hues[@]})) ;;
-            UP)   ((tx=((mx+cos)/scale),ty=((my+sin)/scale),map[tx*mapw+ty]==0&&(mx+=cos,my+=sin)));;
-            DOWN) ((tx=((mx-cos)/scale),ty=((my-sin)/scale),map[tx*mapw+ty]==0&&(mx-=cos,my-=sin)));;
-            #DOWN) ((p0x-=cos,p0y-=sin));;
+            UP)   ((map[(mx+cos)/scale*mapw+my/scale]==0&&(mx+=cos), map[mx/scale*mapw+(my+sin)/scale]==0&&(my+=sin) ));;
+            DOWN) ((map[(mx-cos)/scale*mapw+my/scale]==0&&(mx-=cos), map[mx/scale*mapw+(my-sin)/scale]==0&&(my-=sin) ));;
         esac
     done
-    #printf '\e[%s;%sH\e[41m \e[m' "$((px/2+1))" "$((py+1))"
 
     sincos "$angle"
     {
     drawbg
     drawmap
-    #drawpx 10 10 10
-    #for ((i=0;i<10;i++)) do
-    #    drawpx "$((cx+i))" $((cy+i)) 10
-    #    drawpx "$((cx-i))" $((cy-i)) 20
-    #done
-    #((p1x=p0x+len*cos/scale,p1y=p0y+len*sin/scale))
-    q=0
-    #drawpx "$p0x" "$p0y" "${hues[q++%${#hues[@]}]}"
-    dir=$((len>0?1:-1))
-    for ((i=0;i!=len;i+=dir)) do
-        drawpx "$((cx-mapw+mx*2/scale+i*cos/scale))" "$((cy-maph+my*2/scale+i*sin/scale))" "${hues[i*${#hues[@]}/len]}"
-        #drawpx "$(((p0x+i*cos)/scale))" "$(((p0y+i*sin)/scale))" "${hues[i*${#hues[@]}/len]}"
-        #drawpx "$p0x" "$p0y" "${hues[q++%${#hues[@]}]}"
-    done
-
-    #drawpx "$((cx-mapw+mx/scale*2))" "$((cy-mapw+my/scale*2))" "$sky"
-    #drawpx "$((cx-mapw+mx/scale*2))" "$((cy-mapw+my/scale*2+1))" "$sky"
-    #drawpx "$((cx-mapw+mx/scale*2+1))" "$((cy-mapw+my/scale*2))" "$sky"
-    #drawpx "$((cx-mapw+mx/scale*2+1))" "$((cy-mapw+my/scale*2+1))" "$sky"
-    drawmappx "$((mx/scale))" "$((my/scale))" "$sky"
+    drawray
     info "angle=$angle FRAME=$FRAME totalskipped=$totalskipped mx=$mx my=$my ${INPUT[*]}"
     drawmsgs
     } > buffered
     read -rd '' < buffered
     printf '%s' "$REPLY"
-
-    #drawpx "$((px=cx+len*cos/scale))" "$((py=cy+len*sin/scale))" $grey
-
-    #timedebug { time {
-    #    r=$RANDOM
-    #    columns=()
-    #    for ((i=0;i<cols;i++)) do
-    #        columns+=("$((((r+i)%216)+16))" "$(((i%17)+27))")
-    #    done
-    #timedebug } } 2>time
-    #timedebug read -r calc < time
-
-    #{
-    #timedebug { time {
-    #    drawborder
-    #    #drawbg
-    #    drawcols
-    #timedebug }; } 2>time
-    #timedebug read -r draw < time
-    #timedebug info "${cols}x$((rows*2)) calc:${calc}s draw:${draw}s fps goal:$FPS skipped:$totalskipped"
-    #drawmsgs
-    #} > buffered; read -rd '' < buffered; printf '%s' "$REPLY"
-
 done
 
 
