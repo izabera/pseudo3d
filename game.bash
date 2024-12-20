@@ -318,7 +318,7 @@ while nextframe; do
     sincos "$angle"
     {
     drawborder
-    drawbg
+    #drawbg
     drawrays
     drawmsgs
     infos[frame]=$FRAME
