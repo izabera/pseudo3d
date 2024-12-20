@@ -104,7 +104,7 @@ gamesetup () {
     FRAME=0 __start=${EPOCHREALTIME/.}
 
     nextframe() {
-        local deadline wait=$((1000000/${FPS:=60})) now sleep
+        local deadline wait=$((1000000/FPS)) now sleep
         if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=__start+ ++FRAME*wait))); then
             # you fucked up, your game logic can't run at $FPS
             ((deadline=__start+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait))
@@ -117,7 +117,7 @@ gamesetup () {
         INPUT=()
         while [[ $__input ]]; do
             case $__input in
-                [$' \t\n\r\b\177']*) INPUT+=("${__keys[${__input::1}]}") __input=${input:1} ;;
+                [$' \t\n\r\b\177']*) INPUT+=("${__keys[${__input::1}]}") __input=${__input:1} ;;
                 [[:alnum:][:punct:]]*) INPUT+=("${__input::1}") __input=${__input:1} ;;
                 $'\e'*) # handle this separately to avoid making the top level case slower for no reason
                     case $__input in
@@ -136,10 +136,6 @@ gamesetup () {
 }
 
 sky=39 grass=34
-yellow=226
-white=231
-grey=247
-black=16
 
 drawmsgs () {
     set -- "${msgs[@]:(${#msgs[@]}>5?-5:0):5}"
@@ -160,6 +156,7 @@ drawborder () {
     done
     printf '+%s+\e[K\r\e[B' "${hspaces// /-}"
 }
+
 # dumb function that doesn't know where the horizon is
 # two versions because one case is painful
 # $1 column
@@ -169,7 +166,6 @@ drawborder () {
 dumbdrawcol () {
     # this is super annoying but it also deals with the case if height == 0
     # and rows % 2 == 1, which needs to print a halfblock of sky/grass
-    #local fullsky skygrass tophalfblock fullheight bottomhalfblock fullgrass
 ((
 skygrass=$4==0&&(rows%2==1),
 fullsky=$3/2,
@@ -207,37 +203,9 @@ TIMEFORMAT=%R
 
 
 gamesetup
-#info "${cols}x$((rows*2)) calc:${calc}s draw:${draw}s"
 
-drawpx() {
-    drawn[$1*cols+$2]=$((${3-196}-16))
-    printf '\e[%s;%sH\e[38;5;%s;48;5;%sm▀\e[m' \
-        "$(($1/2+1))" "$(($2+1))" \
-        "$((drawn[($1&-2)*cols+$2]+16))" \
-        "$((drawn[(($1&-2)+1)*cols+$2]+16))"
-}
-cx=$rows cy=$((cols/2)) angle=pi len=10
+angle=pi len=10
 mx=$((22*scale)) my=$((maph/2*scale))
-drawmappx () {
-    drawpx "$((cx-mapw+$1*2))"   "$((cy-maph+$2*2))"   "$3"
-    drawpx "$((cx-mapw+$1*2))"   "$((cy-maph+$2*2+1))" "$3"
-    drawpx "$((cx-mapw+$1*2+1))" "$((cy-maph+$2*2))"   "$3"
-    drawpx "$((cx-mapw+$1*2+1))" "$((cy-maph+$2*2+1))" "$3"
-}
-drawmap () {
-    for ((mapi=0;mapi<maph;mapi++)) do
-        for ((mapj=0;mapj<mapw;mapj++)) do
-            drawmappx "$mapi" "$mapj" "${map[mapi*mapw+mapj]}"
-        done
-    done
-}
-drawdirection () {
-    dir=$((len>0?1:-1))
-    for ((i=0;i!=len;i+=dir)) do
-        drawpx "$((cx-mapw+mx*2/scale+i*cos/scale))" "$((cy-maph+my*2/scale+i*sin/scale))" "${hues[i*${#hues[@]}/len]}"
-    done
-    drawmappx "$((mx/scale))" "$((my/scale))" "$sky"
-}
 
 # horrible horrible horrible horrible
 hit='sideDistX<sideDistY?
@@ -280,7 +248,7 @@ drawrays () {
         horidrawcol "$((x+2))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*6)]}" "$height"
     done
 }
-alias timedebug=${NOTIMEDEBUG+#}
+
 while nextframe; do
     drawn=()
     ((totalskipped+=SKIPPED))
@@ -290,23 +258,24 @@ while nextframe; do
             q) break 2 ;;
             LEFT)  ((angle+=scale/20,angle>=pi2&&(angle-=pi2))) ;;
             RIGHT) ((angle-=scale/20,angle<0&&(angle+=pi2))) ;;
-            UP)   ((map[(mx+cos)/scale*mapw+my/scale]==0&&(mx+=cos), map[mx/scale*mapw+(my+sin)/scale]==0&&(my+=sin) ));;
-            DOWN) ((map[(mx-cos)/scale*mapw+my/scale]==0&&(mx-=cos), map[mx/scale*mapw+(my-sin)/scale]==0&&(my-=sin) ));;
+            UP)   ((map[(mx+cos/3)/scale*mapw+my/scale]==0&&(mx+=cos/3), map[mx/scale*mapw+(my+sin/3)/scale]==0&&(my+=sin/3) ));;
+            DOWN) ((map[(mx-cos/3)/scale*mapw+my/scale]==0&&(mx-=cos/3), map[mx/scale*mapw+(my-sin/3)/scale]==0&&(my-=sin/3) ));;
         esac
     done
 
     sincos "$angle"
+
+    # screen buffering via external file
     {
-    drawborder
-    drawrays
-    #drawmsgs
-    infos[frame]=$FRAME
-    infos[skipped]=$totalskipped
-    infos[res]=$cols\x$((rows*2))
-    drawinfo
+        drawborder
+        drawrays
+        #drawmsgs
+        infos[frame]=$FRAME
+        infos[skipped]=$totalskipped
+        infos[res]=$cols\x$((rows*2))
+        drawinfo
     } > buffered
+
     read -rd '' < buffered
     printf '%s' "$REPLY"
 done
-
-

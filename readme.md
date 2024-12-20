@@ -6,7 +6,7 @@ more screenshots/vidoes at https://imgur.com/a/izas-wolfenstein-bash-journey-bAy
 
 largely a port of https://lodev.org/cgtutor/raycasting.html
 
-use the arrow keys to rotate and move around
+use the arrow keys to rotate and move around, and q to quit
 
 
 ### why this was a bit hard:
