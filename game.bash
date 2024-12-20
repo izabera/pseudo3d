@@ -10,8 +10,10 @@ pisq=98696044010
 pi2=628318
 pi_2=157079
 pi_4=78540
+
+# bhaskara's formula
+# see accuracy/perf tests here https://gist.github.com/izabera/df0740b7f4544342c142100d90f96814/
 cos () ((REPLY=((pisq-4*$1**2)*scale)/(pisq+$1**2)))
-atan() ((x=$1,REPLY=(pi_4*x-(x*(x-scale)*(24470+6630*x/scale)/scale))/scale))
 sincos ()
     case $(($1/pi_2)) in
         0) cos "$1"; cos=$REPLY; cos "$((-$1+pi_2))"; sin=$REPLY ;;
@@ -57,7 +59,7 @@ mapw=24 maph=24
 LANG=C
 # for the basic bash game loop: https://gist.github.com/izabera/5e0cc5fcd598f866eb7c6cc955ef3409
 
-FPS=30
+FPS=${FPS-30}
 
 shopt -s extglob globasciiranges expand_aliases
 gamesetup () {
@@ -157,22 +159,6 @@ drawborder () {
         printf '|\e[%sC|%d\e[K\r\e[B' "$cols" "$i"
     done
     printf '+%s+\e[K\r\e[B' "${hspaces// /-}"
-}
-drawbg () {
-    #local i
-    #for ((i=0;i<rows;i++)) do
-    #    printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$black" "$hspaces"
-    #done
-    for ((i=0;i<rows/2;i++)) do
-        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$sky" "$hspaces"
-    done
-    if ((rows%2==1)); then
-        printf '\e[%d;2H\e[38;5;%s;48;5;%sm%s' "$((i+2))" "$sky" "$grass" "${hspaces// /▀}"
-        ((i++))
-    fi
-    for ((;i<rows;i++)) do
-        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$grass" "$hspaces"
-    done
 }
 # dumb function that doesn't know where the horizon is
 # two versions because one case is painful
@@ -312,9 +298,8 @@ while nextframe; do
     sincos "$angle"
     {
     drawborder
-    #drawbg
     drawrays
-    drawmsgs
+    #drawmsgs
     infos[frame]=$FRAME
     infos[skipped]=$totalskipped
     infos[res]=$cols\x$((rows*2))
