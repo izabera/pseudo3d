@@ -212,12 +212,6 @@ horidrawcol () {
     dumbdrawcol "$1" "$2" "$(((rows*2-h)/2))" "$h"
 }
 
-drawcols () {
-    for ((i=0;i<cols;i++)) do
-        horidrawcol "$((i+2))" "${columns[@]:i*2:2}"
-    done
-}
-
 msg= msgs=()
 error() { printf -v 'msgs[msg++]' '\e[31m%(%T)T [ERROR]: %s\e[m' -1 "$1"; }
 warn () { printf -v 'msgs[msg++]' '\e[33m%(%T)T [WARNING]: %s\e[m' -1 "$1"; }
