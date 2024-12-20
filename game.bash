@@ -266,8 +266,8 @@ hit='sideDistX<sideDistY?
      map[mapX/scale*mapw+mapY/scale]>0?1:hit'
 
 drawrays () {
-    # 90 fov
-    ((planeX=sin*2/3,planeY=-cos*2/3))
+    # fov depends on aspect ratio
+    ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
 
     for ((x = 0; x < cols; x++)) do
         ((cameraX=2*x*scale/cols-scale,
@@ -322,6 +322,8 @@ while nextframe; do
     drawrays
     drawmsgs
     infos[frame]=$FRAME
+    infos[skipped]=$totalskipped
+    infos[res]=$cols\x$((rows*2))
     drawinfo
     } > buffered
     read -rd '' < buffered
