@@ -263,41 +263,51 @@ hit='sideDistX<sideDistY?
      map[mapX/scale*mapw+mapY/scale]>0?1:hit'
 
 drawrays () {
-    mapX=$((mx/scale*scale)) mapY=$((my/scale*scale))
-    ((rayDirX=cos))
-    ((rayDirY=sin))
+    ((planeX = sin * 2 / 3))
+    ((planeY = -cos * 2 / 3))
 
-    (( absDirX = rayDirX < 0 ? -rayDirX : rayDirX ))
-    (( absDirY = rayDirY < 0 ? -rayDirY : rayDirY ))
-    ((deltaDistX = rayDirX ? scale*scale/absDirX : scale**3))
-    ((deltaDistY = rayDirY ? scale*scale/absDirY : scale**3))
+    for ((x = 0; x < cols; x++)) do
+        ((cameraX= 2 * x * scale / cols - scale ))
+        mapX=$((mx/scale*scale)) mapY=$((my/scale*scale))
+        #((rayDirX=cos))
+        #((rayDirY=sin))
+        ((rayDirX=cos + planeX * cameraX/scale))
+        ((rayDirY=sin + planeY * cameraX/scale))
 
-    if (( rayDirX < 0 )); then
-        stepX=-$scale
-        (( sideDistX = (mx - mapX) * deltaDistX / scale ))
-    else
-        stepX=$scale
-        (( sideDistX = (mapX + scale - mx) * deltaDistX / scale ))
-    fi
+        (( absDirX = rayDirX < 0 ? -rayDirX : rayDirX ))
+        (( absDirY = rayDirY < 0 ? -rayDirY : rayDirY ))
+        ((deltaDistX = rayDirX ? scale*scale/absDirX : scale**3))
+        ((deltaDistY = rayDirY ? scale*scale/absDirY : scale**3))
 
-    if (( rayDirY < 0 )); then
-        stepY=-$scale
-        (( sideDistY = (my - mapY) * deltaDistY / scale ))
-    else
-        stepY=$scale
-        (( sideDistY = (mapY + scale - my) * deltaDistY / scale ))
-    fi
+        if (( rayDirX < 0 )); then
+            stepX=-$scale
+            (( sideDistX = (mx - mapX) * deltaDistX / scale ))
+        else
+            stepX=$scale
+            (( sideDistX = (mapX + scale - mx) * deltaDistX / scale ))
+        fi
 
-    #infos[angle]=$angle
-    #infos[rayDirX]=$rayDirX
-    #infos[rayDirY]=$rayDirY
-    #infos[sx]=$sideDistX
-    #infos[sy]=$sideDistY
-    #infos[dx]=$deltaDistX
-    #infos[dy]=$deltaDistY
+        if (( rayDirY < 0 )); then
+            stepY=-$scale
+            (( sideDistY = (my - mapY) * deltaDistY / scale ))
+        else
+            stepY=$scale
+            (( sideDistY = (mapY + scale - my) * deltaDistY / scale ))
+        fi
 
-    ((hit))
-    drawmappx "$((mapX/scale))" "$((mapY/scale))" "$white"
+        #infos[angle]=$angle
+        #infos[rayDirX]=$rayDirX
+        #infos[rayDirY]=$rayDirY
+        #infos[sx]=$sideDistX
+        #infos[sy]=$sideDistY
+        #infos[dx]=$deltaDistX
+        #infos[dy]=$deltaDistY
+
+        ((hit))
+        drawmappx "$((mapX/scale))" "$((mapY/scale))" \
+            "${map[mapX/scale*mapw+mapY/scale]}"
+    done
+    #infos[cols]=$cols
 }
 alias timedebug=${NOTIMEDEBUG+#}
 while nextframe; do
@@ -319,7 +329,7 @@ while nextframe; do
     sincos "$angle"
     {
     drawbg
-    drawmap
+    #drawmap
     drawdirection
     drawrays
     info "angle=$angle FRAME=$FRAME totalskipped=$totalskipped mx=$mx my=$my ${INPUT[*]}"
