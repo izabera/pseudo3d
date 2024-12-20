@@ -47,6 +47,11 @@ map=(
     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
 )
 
+colours=(
+    0 196 36 220 21 201
+    0 160 28 184 20 165
+)
+
 mapw=24 maph=24
 
 LANG=C
@@ -71,13 +76,10 @@ gamesetup () {
     }
 
     if [[ $TERM ]]; then
-        #stty raw
-        #printf '\e[?%s' 1049h 25l
-        #trap 'printf \\e[?%s 1049l 25h; stty sane; exitfunc' exit
         get_term_size() {
             __winch=0
-            printf '\e[%s' '9999;9999H'
-            IFS='[;' read -srdR -p $'\e[6n' _ LINES COLUMNS
+            printf '\e[%s\e[6n' '9999;9999H'
+            IFS='[;' read -rdR _ LINES COLUMNS
             update_sizes
         }
         get_term_size
@@ -157,20 +159,20 @@ drawborder () {
     printf '+%s+\e[K\r\e[B' "${hspaces// /-}"
 }
 drawbg () {
-    local i
-    for ((i=0;i<rows;i++)) do
-        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$black" "$hspaces"
+    #local i
+    #for ((i=0;i<rows;i++)) do
+    #    printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$black" "$hspaces"
+    #done
+    for ((i=0;i<rows/2;i++)) do
+        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$sky" "$hspaces"
     done
-    #for ((i=0;i<rows/2;i++)) do
-    #    printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$sky" "$hspaces"
-    #done
-    #if ((rows%2==1)); then
-    #    printf '\e[%d;2H\e[38;5;%s;48;5;%sm%s' "$((i+2))" "$sky" "$grass" "${hspaces// /▀}"
-    #    ((i++))
-    #fi
-    #for ((;i<rows;i++)) do
-    #    printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$grass" "$hspaces"
-    #done
+    if ((rows%2==1)); then
+        printf '\e[%d;2H\e[38;5;%s;48;5;%sm%s' "$((i+2))" "$sky" "$grass" "${hspaces// /▀}"
+        ((i++))
+    fi
+    for ((;i<rows;i++)) do
+        printf '\e[%d;2H\e[48;5;%sm%s' "$((i+2))" "$grass" "$hspaces"
+    done
 }
 # dumb function that doesn't know where the horizon is
 # two versions because one case is painful
@@ -183,10 +185,10 @@ dumbdrawcol () {
     # and rows % 2 == 1, which needs to print a halfblock of sky/grass
     #local fullsky skygrass tophalfblock fullheight bottomhalfblock fullgrass
 ((
-skygrass = $4 == 0 && (rows % 2 == 1),
+skygrass=$4==0&&(rows%2==1),
 fullsky=$3/2,
-tophalfblock=($3%2==1) * (!skygrass),
-bottomhalfblock=(($3+$4)%2==1) * (!skygrass),
+tophalfblock=($3%2==1)*(!skygrass),
+bottomhalfblock=(($3+$4)%2==1)*(!skygrass),
 fullheight=($4-tophalfblock-bottomhalfblock)/2,
 fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock+skygrass))
 ))
@@ -206,7 +208,8 @@ horidrawcol () {
     # $1 column
     # $2 colour
     # $3 height
-    dumbdrawcol "$1" "$2" "$(((rows*2-${3-0})/2))" "${3-0}"
+    local h=$((${3-0}>rows*2?rows*2:${3-0}))
+    dumbdrawcol "$1" "$2" "$(((rows*2-h)/2))" "$h"
 }
 
 drawcols () {
@@ -263,59 +266,45 @@ hit='sideDistX<sideDistY?
      map[mapX/scale*mapw+mapY/scale]>0?1:hit'
 
 drawrays () {
-    ((planeX = sin * 2 / 3))
-    ((planeY = -cos * 2 / 3))
+    # 90 fov
+    ((planeX=sin*2/3,planeY=-cos*2/3))
 
     for ((x = 0; x < cols; x++)) do
-        ((cameraX= 2 * x * scale / cols - scale ))
-        mapX=$((mx/scale*scale)) mapY=$((my/scale*scale))
-        #((rayDirX=cos))
-        #((rayDirY=sin))
-        ((rayDirX=cos + planeX * cameraX/scale))
-        ((rayDirY=sin + planeY * cameraX/scale))
+        ((cameraX=2*x*scale/cols-scale,
+          mapX=mx/scale*scale,mapY=my/scale*scale,
+          rayDirX=cos+planeX*cameraX/scale,
+          rayDirY=sin+planeY*cameraX/scale,
+          absDirX=rayDirX<0?-rayDirX:rayDirX,
+          absDirY=rayDirY<0?-rayDirY:rayDirY,
+          deltaDistX=rayDirX?scale*scale/absDirX:scale**3,
+          deltaDistY=rayDirY?scale*scale/absDirY:scale**3))
 
-        (( absDirX = rayDirX < 0 ? -rayDirX : rayDirX ))
-        (( absDirY = rayDirY < 0 ? -rayDirY : rayDirY ))
-        ((deltaDistX = rayDirX ? scale*scale/absDirX : scale**3))
-        ((deltaDistY = rayDirY ? scale*scale/absDirY : scale**3))
-
-        if (( rayDirX < 0 )); then
+        if ((rayDirX<0)); then
             stepX=-$scale
-            (( sideDistX = (mx - mapX) * deltaDistX / scale ))
+            ((sideDistX=(mx-mapX)*deltaDistX/scale))
         else
             stepX=$scale
-            (( sideDistX = (mapX + scale - mx) * deltaDistX / scale ))
+            ((sideDistX=(mapX+scale-mx)*deltaDistX/scale))
         fi
 
-        if (( rayDirY < 0 )); then
+        if ((rayDirY<0)); then
             stepY=-$scale
-            (( sideDistY = (my - mapY) * deltaDistY / scale ))
+            ((sideDistY=(my-mapY)*deltaDistY/scale))
         else
             stepY=$scale
-            (( sideDistY = (mapY + scale - my) * deltaDistY / scale ))
+            ((sideDistY=(mapY+scale-my)*deltaDistY/scale))
         fi
 
-        #infos[angle]=$angle
-        #infos[rayDirX]=$rayDirX
-        #infos[rayDirY]=$rayDirY
-        #infos[sx]=$sideDistX
-        #infos[sy]=$sideDistY
-        #infos[dx]=$deltaDistX
-        #infos[dy]=$deltaDistY
-
         ((hit))
-        drawmappx "$((mapX/scale))" "$((mapY/scale))" \
-            "${map[mapX/scale*mapw+mapY/scale]}"
+        ((dist=side==0?sideDistX-deltaDistX:sideDistY-deltaDistY,height=rows*2*scale/dist))
+        horidrawcol "$((x+2))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*6)]}" "$height"
     done
-    #infos[cols]=$cols
 }
 alias timedebug=${NOTIMEDEBUG+#}
 while nextframe; do
     drawn=()
     ((totalskipped+=SKIPPED))
 
-    drawborder
-    #printf '\e[%s;%sH\e[m ' "$((px/2+1))" "$((py+1))"
     for k in "${INPUT[@]}"; do
         case $k in
             q) break 2 ;;
@@ -328,12 +317,11 @@ while nextframe; do
 
     sincos "$angle"
     {
+    drawborder
     drawbg
-    #drawmap
-    drawdirection
     drawrays
-    info "angle=$angle FRAME=$FRAME totalskipped=$totalskipped mx=$mx my=$my ${INPUT[*]}"
     drawmsgs
+    infos[frame]=$FRAME
     drawinfo
     } > buffered
     read -rd '' < buffered
