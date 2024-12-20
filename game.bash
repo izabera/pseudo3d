@@ -1,5 +1,6 @@
 #!/bin/bash
 
+declare -A infos
 hues=(196 197 198 199 200 201 165 129 93 57 21 27 33 39 45 51 50 49 48 47 46 82 118 154 190 226 220 214 208 202)
 
 
@@ -46,18 +47,7 @@ map=(
     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
 )
 
-# horrible horrible horrible horrible
-hit='sideDistX<sideDistY?
-     (sideDistX+=deltaDistX,mapX+=stepX,side=0):
-     (sideDistY+=deltaDistY,mapY+=stepY,side=1),
-     map[mapX/scale*mapw+mapY/scale]>0?1:hit'
 mapw=24 maph=24
-posX=22 posY=12
-dirX=-100000 dirY=0
-planeX=0 planeY=66000
-((cameraX=200000*x/mapw-1))
-((rayDirX=dirX+planeX*cameraX))
-((rayDirY=dirY+planeY*cameraX))
 
 LANG=C
 # for the basic bash game loop: https://gist.github.com/izabera/5e0cc5fcd598f866eb7c6cc955ef3409
@@ -142,14 +132,20 @@ gamesetup () {
 }
 
 sky=39 grass=34
+yellow=226
+white=231
 grey=247
 black=16
 
 drawmsgs () {
-    local i
     set -- "${msgs[@]:(${#msgs[@]}>5?-5:0):5}"
     printf '\e[m\e[%s;2H' "$((rows+2-$#))"
     printf "%.$((cols+5))s\r\e[B\e[C" "$@"
+}
+drawinfo () {
+    ((${#infos[@]}))||return
+    printf '\e[2;2H\e[m'
+    printf '%s=%s\t' "${infos[@]@k}"
 }
 drawborder () {
     local i
@@ -237,9 +233,8 @@ drawpx() {
         "$((drawn[($1&-2)*cols+$2]+16))" \
         "$((drawn[(($1&-2)+1)*cols+$2]+16))"
 }
-cx=$rows cy=$((cols/2)) angle=0 len=10
-mx=$((mapw/2*scale)) my=$((maph/2*scale))
-p0x=$((mx*scale)) p0y=$((cy*scale))
+cx=$rows cy=$((cols/2)) angle=pi len=10
+mx=$((22*scale)) my=$((maph/2*scale))
 drawmappx () {
     drawpx "$((cx-mapw+$1*2))"   "$((cy-maph+$2*2))"   "$3"
     drawpx "$((cx-mapw+$1*2))"   "$((cy-maph+$2*2+1))" "$3"
@@ -253,12 +248,56 @@ drawmap () {
         done
     done
 }
-drawray () {
+drawdirection () {
     dir=$((len>0?1:-1))
     for ((i=0;i!=len;i+=dir)) do
         drawpx "$((cx-mapw+mx*2/scale+i*cos/scale))" "$((cy-maph+my*2/scale+i*sin/scale))" "${hues[i*${#hues[@]}/len]}"
     done
     drawmappx "$((mx/scale))" "$((my/scale))" "$sky"
+}
+
+# horrible horrible horrible horrible
+hit='sideDistX<sideDistY?
+     (sideDistX+=deltaDistX,mapX+=stepX,side=0):
+     (sideDistY+=deltaDistY,mapY+=stepY,side=1),
+     map[mapX/scale*mapw+mapY/scale]>0?1:hit'
+
+drawrays () {
+    mapX=$((mx/scale*scale)) mapY=$((my/scale*scale))
+    ((rayDirX=cos))
+    ((rayDirY=sin))
+
+    (( absDirX = rayDirX < 0 ? -rayDirX : rayDirX ))
+    (( absDirY = rayDirY < 0 ? -rayDirY : rayDirY ))
+    ((deltaDistX = rayDirX ? scale*scale/absDirX : scale**3))
+    ((deltaDistY = rayDirY ? scale*scale/absDirY : scale**3))
+
+    if (( rayDirX < 0 )); then
+        stepX=-$scale
+        (( sideDistX = (mx - mapX) * deltaDistX / scale ))
+    else
+        stepX=$scale
+        (( sideDistX = (mapX + scale - mx) * deltaDistX / scale ))
+    fi
+
+    if (( rayDirY < 0 )); then
+        stepY=-$scale
+        (( sideDistY = (my - mapY) * deltaDistY / scale ))
+    else
+        stepY=$scale
+        (( sideDistY = (mapY + scale - my) * deltaDistY / scale ))
+    fi
+
+    #infos[angle]=$angle
+    #infos[rayDirX]=$rayDirX
+    #infos[rayDirY]=$rayDirY
+    #infos[sx]=$sideDistX
+    #infos[sy]=$sideDistY
+    #infos[dx]=$deltaDistX
+    #infos[dy]=$deltaDistY
+
+    ((hit))
+    drawmappx "$((mapX/scale))" "$((mapY/scale))" "$white"
 }
 alias timedebug=${NOTIMEDEBUG+#}
 while nextframe; do
@@ -281,9 +320,11 @@ while nextframe; do
     {
     drawbg
     drawmap
-    drawray
+    drawdirection
+    drawrays
     info "angle=$angle FRAME=$FRAME totalskipped=$totalskipped mx=$mx my=$my ${INPUT[*]}"
     drawmsgs
+    drawinfo
     } > buffered
     read -rd '' < buffered
     printf '%s' "$REPLY"
