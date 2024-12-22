@@ -124,9 +124,9 @@ gamesetup () {
                     $'\e'[[O][ABCD]*) INPUT+=("${__keys[${__input:2:1}]}") __input=${__input:3} ;; # arrow keys
                     $'\e['*([0-?])*([ -/])[@-~]*) __input=${__input##$'\e['*([0-?])*([ -/])[@-~]} ;; # unsupported csi sequence
                     $'\e'?('[')) break ;; # assume incomplete csi, hopefully it will be resolved by the next read
-                    $'\e'[^[]*) __input=${__input::2} ;; # something went super wrong and we got an unrecognised sequence
+                    $'\e'[^[]*) __input=${__input:2} ;; # something went super wrong and we got an unrecognised sequence
                     esac ;;
-                *) __input=${__input::1} # this was some non ascii unicode character (unsupported for now) or some weird ctrl character
+                *) __input=${__input:1} # this was some non ascii unicode character (unsupported for now) or some weird ctrl character
             esac
         done
         if ((__term)); then
