@@ -257,6 +257,9 @@ drawrays () {
     done
 }
 
+
+if ((BENCHMARK)); then sincos $pi; for i in {1..100}; do drawrays; done; exit; fi
+
 while nextframe; do
     ((totalskipped+=SKIPPED))
 
