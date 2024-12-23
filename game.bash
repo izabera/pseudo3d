@@ -77,7 +77,15 @@ gamesetup () {
         printf -v hspaces '%*s' "$cols"
     }
 
+    # this condition is dumb
+    # previous things already rely on this running in a terminal
     if [[ $TERM ]]; then
+        # kitty kbd proto -> da1
+        printf '\e[?u\e[c'
+        IFS=$'\e[;' read -rdc -a arr
+        if [[ ${arr[*]} = *u* ]]; then
+            kitty=1
+        fi
         get_term_size() {
             __winch=0
             printf '\e[%s\e[6n' '9999;9999H'
