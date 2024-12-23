@@ -216,43 +216,28 @@ angle=pi len=10
 mx=$((22*scale)) my=$((maph/2*scale))
 
 # horrible horrible horrible horrible
-hit='sideDistX<sideDistY?
-     (sideDistX+=deltaDistX,mapX+=stepX,side=0):
-     (sideDistY+=deltaDistY,mapY+=stepY,side=1),
-     map[mapX/scale*mapw+mapY/scale]>0?1:hit'
+hit='sdx<sdy?
+(sdx+=dx,mapX+=sx,side=0):
+(sdy+=dy,mapY+=sy,side=1),
+map[mapX/scale*mapw+mapY/scale]||hit'
 
 drawrays () {
     # fov depends on aspect ratio
     ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
 
-    for ((x = 0; x < cols; x++)) do
-        ((cameraX=2*x*scale/cols-scale,
-          mapX=mx/scale*scale,mapY=my/scale*scale,
-          rayDirX=cos+planeX*cameraX/scale,
-          rayDirY=sin+planeY*cameraX/scale,
-          absDirX=rayDirX<0?-rayDirX:rayDirX,
-          absDirY=rayDirY<0?-rayDirY:rayDirY,
-          deltaDistX=rayDirX?scale*scale/absDirX:scale**3,
-          deltaDistY=rayDirY?scale*scale/absDirY:scale**3))
+    for ((x=0;x<cols;x++)) do
+((cameraX=2*x*scale/cols-scale,
+mapX=mx/scale*scale,mapY=my/scale*scale,
+rdx=cos+planeX*cameraX/scale,
+rdy=sin+planeY*cameraX/scale,
+adX=rdx<0?-rdx:rdx,
+adY=rdy<0?-rdy:rdy,
+dx=rdx?scale*scale/adX:scale**3,
+dy=rdy?scale*scale/adY:scale**3,
+rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
+rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
+hit,dist=side==0?sdx-dx:sdy-dy,height=rows*2*scale/dist))
 
-        if ((rayDirX<0)); then
-            stepX=-$scale
-            ((sideDistX=(mx-mapX)*deltaDistX/scale))
-        else
-            stepX=$scale
-            ((sideDistX=(mapX+scale-mx)*deltaDistX/scale))
-        fi
-
-        if ((rayDirY<0)); then
-            stepY=-$scale
-            ((sideDistY=(my-mapY)*deltaDistY/scale))
-        else
-            stepY=$scale
-            ((sideDistY=(mapY+scale-my)*deltaDistY/scale))
-        fi
-
-        ((hit))
-        ((dist=side==0?sideDistX-deltaDistX:sideDistY-deltaDistY,height=rows*2*scale/dist))
         horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*6)]}" "$height"
     done
 }
