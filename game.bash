@@ -71,7 +71,7 @@ gamesetup () {
 
     # size-dependent vars
     update_sizes () {
-        ((rows=LINES-2,cols=COLUMNS-5))
+        ((rows=LINES-2,cols=COLUMNS-2))
         vspaces=
         for ((i=0;i<rows;i++)) do vspaces+=$'▀\e[D\e[B'; done
         printf -v hspaces '%*s' "$cols"
@@ -250,7 +250,6 @@ drawrays () {
 }
 
 while nextframe; do
-    drawn=()
     ((totalskipped+=SKIPPED))
 
     for k in "${INPUT[@]}"; do
@@ -267,7 +266,7 @@ while nextframe; do
 
     # screen buffering via external file
     {
-        drawborder
+        #drawborder
         drawrays
         #drawmsgs
         infos[frame]=$FRAME
