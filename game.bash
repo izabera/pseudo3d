@@ -71,7 +71,7 @@ gamesetup () {
 
     # size-dependent vars
     update_sizes () {
-        ((rows=LINES-2,cols=COLUMNS-2))
+        ((rows=LINES-0,cols=COLUMNS-0))
         vspaces=
         for ((i=0;i<rows;i++)) do vspaces+=$'▀\e[D\e[B'; done
         printf -v hspaces '%*s' "$cols"
@@ -174,7 +174,7 @@ bottomhalfblock=(($3+$4)%2==1)*(!skygrass),
 fullheight=($4-tophalfblock-bottomhalfblock)/2,
 fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock+skygrass))
 ))
-    printf '\e[2;%sH' "$1"
+    printf '\e[1;%sH' "$1"
     # 9 == length of $'▀\e[D\e[B' in LANG=C
     printf '\e[m\e[38;5;%s;48;5;%sm%s' \
         "$sky"   "$sky"   "${vspaces::9*fullsky}" \
@@ -245,7 +245,7 @@ drawrays () {
 
         ((hit))
         ((dist=side==0?sideDistX-deltaDistX:sideDistY-deltaDistY,height=rows*2*scale/dist))
-        horidrawcol "$((x+2))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*6)]}" "$height"
+        horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*6)]}" "$height"
     done
 }
 
