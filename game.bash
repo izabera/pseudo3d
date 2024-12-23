@@ -73,7 +73,10 @@ gamesetup () {
     update_sizes () {
         ((rows=LINES-0,cols=COLUMNS-0))
         vspaces=
-        for ((i=0;i<rows;i++)) do vspaces+=$'▀\e[D\e[B'; done
+        halfspaces=
+        vblock=$'▀\e[D\e[B'
+        for ((i=0;i<rows;i++)) do vspaces+=$' \e[D\e[B'; done
+        for ((i=0;i<(rows+1)/2;i++)) do halfspaces+=$' \e[D\e[B'; done
         printf -v hspaces '%*s' "$cols"
     }
 
@@ -171,6 +174,7 @@ drawborder () {
 # $2 colour
 # $3 starting (half)row
 # $4 length
+
 dumbdrawcol () {
     # this is super annoying but it also deals with the case if height == 0
     # and rows % 2 == 1, which needs to print a halfblock of sky/grass
@@ -182,15 +186,33 @@ bottomhalfblock=(($3+$4)%2==1)*(!skygrass),
 fullheight=($4-tophalfblock-bottomhalfblock)/2,
 fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock+skygrass))
 ))
-    printf '\e[1;%sH' "$1"
+    # 7 == length of $' \e[D\e[B'
     # 9 == length of $'▀\e[D\e[B' in LANG=C
-    printf '\e[m\e[38;5;%s;48;5;%sm%s' \
-        "$sky"   "$sky"   "${vspaces::9*fullsky}" \
-        "$sky"   "$2"     "${vspaces::9*tophalfblock}" \
-        "$2"     "$2"     "${vspaces::9*fullheight}" \
-        "$sky"   "$grass" "${vspaces::9*skygrass}" \
-        "$2"     "$grass" "${vspaces::9*bottomhalfblock}" \
-        "$grass" "$grass" "${vspaces::9*fullgrass}"
+
+    # this code is horrible because this function is more performance-intensive than it looks like,
+    # and it takes a ridiculous % of the time if you write it in a less atrocious way
+    #
+    # what                 | max size
+    # ---------------------+-----------
+    # ceiling to horizon   | (rows+1)/2
+    # tophalf              | 1
+    # wall                 | rows
+    # bottomhalf           | 1
+    # horizon to floor     | (rows+1)/2
+    #
+    # in ${var:start:len} bash will copy the string before extracting the substring
+    # so this could use a long string of $'▀\e[D\e[B' as tall as the screen, but that'd be slower
+    # instead we use a specialised version that's shorter
+
+    #       <cursor><----sky----><------tophalf------><----wall---><------skygrass-----><-----bottomhalf----><---grass--->
+    printf '\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s' \
+        "$1" \
+        "$sky"          "${halfspaces::7*fullsky}" \
+        "$sky" "$2"     "${vblock::9*tophalfblock}" \
+        "$2"            "${vspaces::7*fullheight}" \
+        "$sky" "$grass" "${vblock::9*skygrass}" \
+        "$2"   "$grass" "${vblock::9*bottomhalfblock}" \
+        "$grass"        "${halfspaces::7*fullgrass}"
 }
 
 # knows where the horizon is
