@@ -22,8 +22,8 @@ sincos ()
         3) cos "$(($1-pi2))"; cos=$REPLY; cos "$((pi_2*3-$1))"; sin=$((-REPLY)) ;;
     esac
 
-smallmap=${smallmap-1}
-if ((smallmap)); then
+mapselect=${mapselect-2}
+if ((mapselect==1)); then
 map=(
     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
@@ -53,7 +53,7 @@ map=(
 mapw=24 maph=24
 mx=$((22*scale)) my=$((maph/2*scale))
 angle=pi
-else
+elif ((mapselect==2)); then
 
 map=(
     5 5 5 5 5 5 5 5 5 6 6 6 6 6 6 6 6 6 6 5 5 5 5 5 6 6 6 6 6 6 6 6 6 5 5 5 5 6 6 6 6 6 6 6
@@ -105,12 +105,52 @@ mapw=44 maph=44
 ((mx=375*scale/10))
 ((my=95*scale/10))
 angle=$((pi2-pi/2))
+else
+map=(
+    9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 2 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 3 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 4 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 5 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 6 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 8 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+    9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9
+)
+mapw=18 maph=18
+((mx=scale,my=(maph-1)*scale))
+angle=$((pi2-pi/4))
 fi
 
-colours=(
-    0 196 36 220 21 201 147 134 124
-    0 160 28 184 20 165 111  98  88
+# colours are hard and i don't know what i'm doing
+walls=(
+    1 2 2
+    3 4 1
+    4 2 1
+    3 0 0
+    3 1 2
+    4 3 5
+    1 0 3
+    1 1 5
+    0 0 4
 )
+wallcount=$((${#walls[@]}/3+1))
+
+makecolours ()
+for ((i=0;i<${#walls[@]};i+=3)) do
+    ((colours[1+i/3]          =walls[i]  *6*6+walls[i+1]  *6+walls[i+2]  +16))
+    ((colours[1+i/3+wallcount]=walls[i]/2*6*6+walls[i+1]/2*6+walls[i+2]/2+16))
+done
+sky=252 grass=239
 
 LANG=C
 # for the basic bash game loop: https://gist.github.com/izabera/5e0cc5fcd598f866eb7c6cc955ef3409
@@ -203,8 +243,6 @@ gamesetup () {
         fi
     }
 }
-
-sky=39 grass=34
 
 drawmsgs () {
     set -- "${msgs[@]:(${#msgs[@]}>5?-5:0):5}"
@@ -316,8 +354,9 @@ dx=rdx?scale*scale/adX:inf,
 dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
-hit,dist=side==0?sdx-dx:sdy-dy,height=rows*2*scale/dist))
-        horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*9)]}" "$height"
+hit,dist=side==0?sdx-dx:sdy-dy,height=dist==0?rows*2:rows*2*scale/dist))
+horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
+        #horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$height"
     done
 }
 
@@ -326,20 +365,34 @@ if ((BENCHMARK)); then sincos "$angle"; for i in {1..100}; do drawrays; done; ex
 
 alias nobuffer=${NOBUFFER+#}
 
+speed=0 rspeed=0
 while nextframe; do
     ((totalskipped+=SKIPPED))
 
     for k in "${INPUT[@]}"; do
         case $k in
             q) break 2 ;;
-            LEFT)  ((angle+=scale/20,angle>=pi2&&(angle-=pi2))) ;;
-            RIGHT) ((angle-=scale/20,angle<0&&(angle+=pi2))) ;;
-            UP)   ((map[(mx+cos/3)/scale*mapw+my/scale]==0&&(mx+=cos/3), map[mx/scale*mapw+(my+sin/3)/scale]==0&&(my+=sin/3) ));;
-            DOWN) ((map[(mx-cos/3)/scale*mapw+my/scale]==0&&(mx-=cos/3), map[mx/scale*mapw+(my-sin/3)/scale]==0&&(my-=sin/3) ));;
+            LEFT)  rspeed=$((scale/20));; #((angle+=scale/20,angle>=pi2&&(angle-=pi2))) ;;
+            RIGHT) rspeed=$((-scale/20));; #((angle-=scale/20,angle<0&&(angle+=pi2))) ;;
+            UP)   speed=$scale;; #((map[(mx+cos/3)/scale*mapw+my/scale]==0&&(mx+=cos/3), map[mx/scale*mapw+(my+sin/3)/scale]==0&&(my+=sin/3) ));;
+            DOWN) speed=-$scale;; #((map[(mx-cos/3)/scale*mapw+my/scale]==0&&(mx-=cos/3), map[mx/scale*mapw+(my-sin/3)/scale]==0&&(my-=sin/3) ));;
+
+            R) ((r+=r<5)) ;; r) ((r-=r>0)) ;;
+            G) ((g+=g<5)) ;; g) ((g-=g>0)) ;;
+            B) ((b+=b<5)) ;; b) ((b-=b>0)) ;;
+            SPACE) ((select=select++%wallcount));;
         esac
     done
+    #walls[select*3+0]=$r
+    #walls[select*3+1]=$g
+    #walls[select*3+2]=$b
+    #makecolours
+    #((map[(mx-(cos*speed)/scale/3)/scale*mapw+my/scale]==0&&(mx-=cos/3), map[mx/scale*mapw+(my-sin/3)/scale]==0&&(my-=sin/3) ))
 
+    ((angle+=rspeed,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
     sincos "$angle"
+    ((map[(mx+cos*speed/scale/3)/scale*mapw+my/scale]==0&&(mx+=cos*speed/scale/3), map[mx/scale*mapw+(my+sin*speed/scale/3)/scale]==0&&(my+=sin*speed/scale/3) ))
+    ((speed=speed*2/3,rspeed=rspeed*2/3))
 
     # screen buffering via external file
     nobuffer {
@@ -349,7 +402,7 @@ while nextframe; do
         #infos[frame]=$FRAME
         #infos[skipped]=$totalskipped
         #infos[res]=$cols\x$((rows*2))
-        #drawinfo
+        drawinfo
     nobuffer } > buffered
 
     nobuffer read -rd '' < buffered
