@@ -243,6 +243,9 @@ hit='sdx<sdy?
 (sdy+=dy,mapY+=sy,side=1),
 map[mapX/scale*mapw+mapY/scale]||hit'
 
+# arbitrary value that's a lot bigger than the map and that doesn't make the maths overflow
+# scale**3 was too big :c
+((inf=scale**2*10))
 drawrays () {
     # fov depends on aspect ratio
     ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
@@ -254,8 +257,8 @@ rdx=cos+planeX*cameraX/scale,
 rdy=sin+planeY*cameraX/scale,
 adX=rdx<0?-rdx:rdx,
 adY=rdy<0?-rdy:rdy,
-dx=rdx?scale*scale/adX:scale**3,
-dy=rdy?scale*scale/adY:scale**3,
+dx=rdx?scale*scale/adX:inf,
+dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
 hit,dist=side==0?sdx-dx:sdy-dy,height=rows*2*scale/dist))
