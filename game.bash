@@ -22,6 +22,16 @@ sincos ()
         3) cos "$(($1-pi2))"; cos=$REPLY; cos "$((pi_2*3-$1))"; sin=$((-REPLY)) ;;
     esac
 
+dispatch () {
+    local -n var
+    local serial
+    for var in "${state[@]}"; do
+        serial+="${var@A} "
+    done
+    for fd in "${dispatch[@]}"; do
+        echo "$serial; $*" >&"$fd"
+    done
+}
 mapselect=${mapselect-2}
 if ((mapselect==1)); then
 map=(
@@ -158,16 +168,28 @@ LANG=C
 FPS=${FPS-30}
 
 shopt -s extglob globasciiranges expand_aliases
+start=${EPOCHREALTIME/.}
+totalskipped=0
+dumpstats() {
+    echo "final resolution: ${cols}x$((rows*2))"
+    echo "fps target: $FPS"
+    echo "terminated after frame: $FRAME"
+    if ((BENCHMARK)); then
+        echo "time per frame: $(((${EPOCHREALTIME/.}-start)/FRAME))µs"
+    else
+        echo "skipped frames: $totalskipped"
+    fi
+}
 gamesetup () {
     stty -echo
     # save cursor pos -> alt screen -> hide cursor -> go to 1;1 -> delete screen
     printf '\e7\e[?1049h\e[?25l\e[H\e[J'
-    exitfunc () { printf '\e[?25h\e[?1049l\e[m\e8' >/dev/tty; stty echo; }
+    exitfunc () { dispatch exit; wait; printf '\e[?25h\e[?1049l\e[m\e8' >/dev/tty; stty echo; dumpstats; }
     trap exitfunc exit
 
     # size-dependent vars
     update_sizes () {
-        ((rows=LINES-0,cols=COLUMNS-0))
+        ((rows=LINES,cols=COLUMNS))
 
         # see dumbdrawcol
         vspaces=
@@ -191,7 +213,9 @@ gamesetup () {
             __winch=0
             printf '\e[%s\e[6n' '9999;9999H'
             IFS='[;' read -rdR _ LINES COLUMNS
+            dispatch "${LINES@A} ${COLUMNS@A}"
             update_sizes
+            dispatch update_sizes
         }
         get_term_size
         trap __winch=1 WINCH
@@ -200,7 +224,9 @@ gamesetup () {
         __term=0
         get_term_size() {
             LINES=24 COLUMNS=80
+            dispatch "${LINES@A} ${COLUMNS@A}"
             update_sizes
+            dispatch update_sizes
         }
     fi
 
@@ -251,7 +277,7 @@ drawmsgs () {
 }
 drawinfo () {
     ((${#infos[@]}))||return
-    printf '\e[2;2H\e[m'
+    printf '\e[1;1H\e[m'
     printf '%s=%s\t' "${infos[@]@k}"
 }
 drawborder () {
@@ -343,7 +369,7 @@ drawrays () {
     # fov depends on aspect ratio
     ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
 
-    for ((x=0;x<cols;x++)) do
+    for ((x=tid;x<cols;x+=NTHR)) do
 ((cameraX=2*x*scale/cols-scale,
 mapX=mx/scale*scale,mapY=my/scale*scale,
 rdx=cos+planeX*cameraX/scale,
@@ -355,17 +381,63 @@ dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
 hit,dist=side==0?sdx-dx:sdy-dy,height=dist==0?rows*2:rows*2*scale/dist))
-horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
+        horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
         #horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$height"
+    done > buffered."$tid"
+    printf x
+}
+tid=0
+drawraysbg () {
+    NTHR=$1
+    tid=$2
+    while read -r; do
+        eval "$REPLY"
+    done
+}
+state=(sin cos mx my)
+drawframe () {
+    #if ((NTHR>1)); then
+        dispatch drawrays
+        for ((t=0;t<NTHR;t++)) do read -rn1 -u"${notify[t]}"; done
+    #else
+    #    drawrays
+    #fi
+    for ((t=0;t<NTHR;t++)) do
+        read -rd '' < buffered."$t"
+        printf %s "$REPLY"
     done
 }
 
+NTHR=${NTHR-4}
 
-if ((BENCHMARK)); then sincos "$angle"; for i in {1..100}; do drawrays; done; exit; fi
+exec {stderr}>&2
 
-alias nobuffer=${NOBUFFER+#}
+#((NTHR>1)) &&
+for ((thread=0;thread<NTHR;thread++)) do
+    # bash properly supports one coproc at a time
+    # then it gets confused and forgets to clean processes up etc
+    # however we just need it to spawn the processes and gives us a pair of fds
+    # then we can cleanup manually
+    # (also we need to silence an error message that can't be avoided)
+    { coproc tmp { drawraysbg "$NTHR" "$thread" 2>err; }; } 2>/dev/null
+    notify[thread]=${tmp[0]}
+    dispatch[thread]=${tmp[1]}
+done
 
+if ((BENCHMARK)); then
+    sincos "$angle"
+    for i in {1..100}; do drawframe; done
+    FRAME=100
+    exit
+fi
+
+r=${walls[0]}
+g=${walls[1]}
+b=${walls[2]}
+select=0
 speed=0 rspeed=0
+
+
 while nextframe; do
     ((totalskipped+=SKIPPED))
 
@@ -380,31 +452,37 @@ while nextframe; do
             R) ((r+=r<5)) ;; r) ((r-=r>0)) ;;
             G) ((g+=g<5)) ;; g) ((g-=g>0)) ;;
             B) ((b+=b<5)) ;; b) ((b-=b>0)) ;;
-            SPACE) ((select=select++%wallcount));;
+            SPACE) ((select=++select%(wallcount-1),
+                     r=walls[select*3+0],
+                     g=walls[select*3+1],
+                     b=walls[select*3+2]));;
         esac
     done
-    #walls[select*3+0]=$r
-    #walls[select*3+1]=$g
-    #walls[select*3+2]=$b
-    #makecolours
+    walls[select*3+0]=$r
+    walls[select*3+1]=$g
+    walls[select*3+2]=$b
+    makecolours
     #((map[(mx-(cos*speed)/scale/3)/scale*mapw+my/scale]==0&&(mx-=cos/3), map[mx/scale*mapw+(my-sin/3)/scale]==0&&(my-=sin/3) ))
 
-    ((angle+=rspeed,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
+    ((angle+=rspeed*2,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
     sincos "$angle"
     ((map[(mx+cos*speed/scale/3)/scale*mapw+my/scale]==0&&(mx+=cos*speed/scale/3), map[mx/scale*mapw+(my+sin*speed/scale/3)/scale]==0&&(my+=sin*speed/scale/3) ))
     ((speed=speed*2/3,rspeed=rspeed*2/3))
 
-    # screen buffering via external file
-    nobuffer {
-        #drawborder
-        drawrays
-        #drawmsgs
-        #infos[frame]=$FRAME
-        #infos[skipped]=$totalskipped
-        #infos[res]=$cols\x$((rows*2))
-        drawinfo
-    nobuffer } > buffered
 
-    nobuffer read -rd '' < buffered
-    nobuffer printf '%s' "$REPLY"
+    # screen buffering via external file
+        #drawborder
+        drawframe
+        #drawrays 1
+        #drawrays 2
+        #drawrays 3
+        #drawrays 4
+        #drawmap
+        #drawmsgs
+        infos[frame]=$FRAME
+        infos[skipped]=$totalskipped
+        #infos[res]=$cols\x$((rows*2))
+        #infos[select]=$select
+        #infos[rgb]=$r,$g,$b
+        drawinfo
 done
