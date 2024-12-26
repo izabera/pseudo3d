@@ -369,7 +369,7 @@ drawrays () {
     # fov depends on aspect ratio
     ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
 
-    for ((x=tid;x<cols;x+=NTHR)) do
+    for ((x=cols/NTHR*tid;x<cols/NTHR*(tid+1);x++)) do
 ((cameraX=2*x*scale/cols-scale,
 mapX=mx/scale*scale,mapY=my/scale*scale,
 rdx=cos+planeX*cameraX/scale,
@@ -479,10 +479,10 @@ while nextframe; do
         #drawrays 4
         #drawmap
         #drawmsgs
-        infos[frame]=$FRAME
-        infos[skipped]=$totalskipped
+        #infos[frame]=$FRAME
+        #infos[skipped]=$totalskipped
         #infos[res]=$cols\x$((rows*2))
         #infos[select]=$select
         #infos[rgb]=$r,$g,$b
-        drawinfo
+        #drawinfo
 done
