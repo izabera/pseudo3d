@@ -9,7 +9,7 @@ largely a port of https://lodev.org/cgtutor/raycasting.html
 use the arrow keys to rotate and move around, and q to quit
 
 
-### why this was a bit hard:
+### why this was a bit hard
 
 - bash is slow.  this is by far the biggest issue.  it's so slow that you
   cannot possibly achieve an acceptable frame rate if you have to execute even
@@ -61,7 +61,7 @@ use the arrow keys to rotate and move around, and q to quit
 
     - holy shit i'm bad at maths, i went to uni for this what the fuck
 
-### faq:
+### faq
 
 - q: it fucks things up when i resize the window/it's a flickery mess/it
      generally looks like shite on my terminal
@@ -76,3 +76,14 @@ use the arrow keys to rotate and move around, and q to quit
 - q: is this code all pure bash?
 - a: no.  it also calls stty once at startup to disable echo, and once at exit
      to re enable it
+
+### roadmap
+
+- [x] semi-accurate pseudo 3d
+- [x] fluid movement
+- [x] decent framerate
+- [x] parallel rendering
+- [ ] kitty protocol
+- [ ] textures
+- [ ] objects/enemies
+- [ ] sound

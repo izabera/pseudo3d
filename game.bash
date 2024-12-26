@@ -177,7 +177,7 @@ dumpstats() {
     if ((BENCHMARK)); then
         echo "time per frame: $(((${EPOCHREALTIME/.}-start)/FRAME))µs"
     else
-        echo "skipped frames: $totalskipped"
+        echo "skipped frames: $totalskipped ($((totalskipped*100/FRAME))%)"
     fi
 }
 gamesetup () {
@@ -403,9 +403,9 @@ drawframe () {
     #    drawrays
     #fi
     for ((t=0;t<NTHR;t++)) do
-        read -rd '' < buffered."$t"
-        printf %s "$REPLY"
+        read -rd '' "buffered[t]" < buffered."$t"
     done
+    printf %s "${buffered[@]}"
 }
 
 NTHR=${NTHR-4}
