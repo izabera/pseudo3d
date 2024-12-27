@@ -94,7 +94,7 @@ gamesetup () {
         local deadline wait=$((1000000/FPS)) now sleep
         if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=START+ ++FRAME*wait))); then
             # you fucked up, your game logic can't run at $FPS
-            ((deadline=START+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait))
+            ((deadline=START+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait,TOTALSKIPPED+=SKIPPED))
         fi
         while ((now<deadline)); do
             printf -v sleep 0.%06d "$((deadline-now))"
