@@ -168,23 +168,39 @@ LANG=C
 FPS=${FPS-30}
 
 shopt -s extglob globasciiranges expand_aliases
-start=${EPOCHREALTIME/.}
-totalskipped=0
+
 dumpstats() {
     echo "final resolution: ${cols}x$((rows*2))"
     echo "fps target: $FPS"
     echo "terminated after frame: $FRAME"
     if ((BENCHMARK)); then
-        echo "time per frame: $(((${EPOCHREALTIME/.}-start)/FRAME))µs"
+        echo "time per frame: $(((${EPOCHREALTIME/.}-START)/FRAME))µs"
     else
-        echo "skipped frames: $totalskipped ($((totalskipped*100/FRAME))%)"
+        echo "skipped frames: $TOTALSKIPPED ($((TOTALSKIPPED*100/FRAME))%)"
     fi
 }
+
 gamesetup () {
     stty -echo
-    # save cursor pos -> alt screen -> hide cursor -> go to 1;1 -> delete screen
-    printf '\e7\e[?1049h\e[?25l\e[H\e[J'
-    exitfunc () { dispatch exit; wait; printf '\e[?25h\e[?1049l\e[m\e8' >/dev/tty; stty echo; dumpstats; }
+
+    printf %b%.b \
+        '\e[?1049h' 'alt screen on' \
+        '\e[?25l'   'cursor off'    \
+        '\e[?1004h' 'report focus'  \
+        '\e[H'      'go to 1;1'     \
+        '\e[J'      'erase screen'
+
+    exitfunc () {
+        dispatch exit
+        wait
+        printf %b%.b >/dev/tty \
+            '\e[?1004l' 'focus off' \
+            '\e[?25h'   'cursor on' \
+            '\e[?1049l' 'alt screen off'
+
+        stty echo
+        dumpstats
+    }
     trap exitfunc exit
 
     # size-dependent vars
@@ -236,13 +252,14 @@ gamesetup () {
         [$'\n']=ENTER [$'\r']=ENTER
         [$'\177']=BACKSLASH [$'\b']=BACKSLASH
     )
-    FRAME=0 __start=${EPOCHREALTIME/.}
+    FRAME=0 START=${EPOCHREALTIME/.} TOTALSKIPPED=0 FOCUS=1
+
 
     nextframe() {
         local deadline wait=$((1000000/FPS)) now sleep
-        if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=__start+ ++FRAME*wait))); then
+        if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=START+ ++FRAME*wait))); then
             # you fucked up, your game logic can't run at $FPS
-            ((deadline=__start+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait))
+            ((deadline=START+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait))
         fi
         while ((now<deadline)); do
             printf -v sleep 0.%06d "$((deadline-now))"
@@ -256,6 +273,8 @@ gamesetup () {
                 [[:alnum:][:punct:]]*) INPUT+=("${__input::1}") __input=${__input:1} ;;
                 $'\e'*) # handle this separately to avoid making the top level case slower for no reason
                     case $__input in
+                    $'\e'\[I*) __input=${input:2} FOCUS=1 ;;
+                    $'\e'\[O*) __input=${input:2} FOCUS=0 ;;
                     $'\e'[[O][ABCD]*) INPUT+=("${__keys[${__input:2:1}]}") __input=${__input:3} ;; # arrow keys
                     $'\e['*([0-?])*([ -/])[@-~]*) __input=${__input##$'\e['*([0-?])*([ -/])[@-~]} ;; # unsupported csi sequence
                     $'\e'?('[')) break ;; # assume incomplete csi, hopefully it will be resolved by the next read
@@ -439,8 +458,6 @@ speed=0 rspeed=0
 
 
 while nextframe; do
-    ((totalskipped+=SKIPPED))
-
     for k in "${INPUT[@]}"; do
         case $k in
             q) break 2 ;;
@@ -484,5 +501,6 @@ while nextframe; do
         #infos[res]=$cols\x$((rows*2))
         #infos[select]=$select
         #infos[rgb]=$r,$g,$b
-        #drawinfo
+        infos[focus]=$FOCUS
+        drawinfo
 done
