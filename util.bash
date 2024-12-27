@@ -14,6 +14,7 @@ drawmsgs () {
     printf '\e[m\e[%s;2H' "$((rows+2-$#))"
     printf "%.$((cols+5))s\r\e[B\e[C" "$@"
 }
+declare -A infos
 drawinfo () {
     ((${#infos[@]}))||return
     printf '\e[1;1H\e[m'

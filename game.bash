@@ -1,20 +1,11 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 
-dispatch () {
-    local -n var
-    local serial
-    for var in "${state[@]}"; do
-        serial+="${var@A} "
-    done
-    for fd in "${dispatch[@]}"; do
-        echo "$serial; $*" >&"$fd"
-    done
-}
 mapselect=${mapselect-2}
 source maths.bash
 source maps.bash
 source colours.bash
 source util.bash
+source dispatch.bash
 
 
 LANG=C
@@ -198,7 +189,7 @@ hit='sdx<sdy?
 (sdy+=dy,mapY+=sy,side=1),
 map[mapX/scale*mapw+mapY/scale]||hit'
 
-drawrays () {
+drawraysbackend () {
     # fov depends on aspect ratio
     ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
 
@@ -214,48 +205,38 @@ dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
 hit,dist=side==0?sdx-dx:sdy-dy,height=dist==0?rows*2:rows*2*scale/dist))
+
+        # depth map
         horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
+
+        # wall colours
         #horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$height"
-    done > buffered."$tid"
-    printf x
-}
-tid=0
-drawraysbg () {
-    NTHR=$1
-    tid=$2
-    while read -r; do
-        eval "$REPLY"
     done
 }
-state=(sin cos mx my)
+
+drawrays () {
+    if ((NTHR>1)); then
+        drawraysbackend > buffered."$tid"
+        printf x
+    else
+        drawraysbackend
+    fi
+}
+
 drawframe () {
-    #if ((NTHR>1)); then
+    if ((NTHR>1)); then
         dispatch drawrays
         for ((t=0;t<NTHR;t++)) do read -rn1 -u"${notify[t]}"; done
-    #else
-    #    drawrays
-    #fi
-    for ((t=0;t<NTHR;t++)) do
-        read -rd '' "buffered[t]" < buffered."$t"
-    done
-    printf %s "${buffered[@]}"
+        for ((t=0;t<NTHR;t++)) do
+            read -rd '' 'buffered[t]' < buffered."$t"
+        done
+        printf %s "${buffered[@]}"
+    else
+        drawrays
+    fi
 }
 
-NTHR=${NTHR-4}
-
-exec {stderr}>&2
-
-#((NTHR>1)) &&
-for ((thread=0;thread<NTHR;thread++)) do
-    # bash properly supports one coproc at a time
-    # then it gets confused and forgets to clean processes up etc
-    # however we just need it to spawn the processes and gives us a pair of fds
-    # then we can cleanup manually
-    # (also we need to silence an error message that can't be avoided)
-    { coproc tmp { drawraysbg "$NTHR" "$thread" 2>err; }; } 2>/dev/null
-    notify[thread]=${tmp[0]}
-    dispatch[thread]=${tmp[1]}
-done
+run_listeners
 
 if ((BENCHMARK)); then
     sincos "$angle"
@@ -280,8 +261,8 @@ while nextframe; do
 
     ((angle+=rspeed*2,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
     sincos "$angle"
-    ((map[(mx+cos*speed/scale/3)/scale*mapw+my/scale]==0&&(mx+=cos*speed/scale/3), map[mx/scale*mapw+(my+sin*speed/scale/3)/scale]==0&&(my+=sin*speed/scale/3) ))
-    ((speed=speed*2/3,rspeed=rspeed*2/3))
-
+    ((tx=mx+cos*speed/scale/3,map[tx/scale*mapw+my/scale]==0&&(mx=tx),
+      ty=my+sin*speed/scale/3,map[mx/scale*mapw+ty/scale]==0&&(my=ty),
+      speed=speed*2/3,rspeed=rspeed*2/3))
     drawframe
 done
