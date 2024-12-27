@@ -1,5 +1,6 @@
 dumpstats() {
     echo "final resolution: ${cols}x$((rows*2))"
+    echo "colours: ${COLORTERM-256}"
     echo "fps target: $FPS"
     echo "terminated after frame: $FRAME"
     if ((BENCHMARK)); then

@@ -1,6 +1,6 @@
 # a raycaster in bash
 
-https://github.com/user-attachments/assets/c6463967-539d-447f-836d-3e478276b814
+https://github.com/user-attachments/assets/51c07747-ff7b-4994-9a57-7657f695ca10
 
 more screenshots/vidoes at https://imgur.com/a/izas-wolfenstein-bash-journey-bAy5zhp
 
@@ -83,6 +83,7 @@ use the arrow keys to rotate and move around, and q to quit
 - [x] fluid movement
 - [x] decent framerate
 - [x] parallel rendering
+- [x] 24 bit colours
 - [ ] kitty protocol
 - [ ] textures
 - [ ] objects/enemies

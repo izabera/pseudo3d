@@ -124,13 +124,31 @@ gamesetup () {
     }
 }
 
+# this code is horrible because this function is more performance-intensive than it looks like,
+# and it takes a ridiculous % of the time if you write it in a less atrocious way
+#
+# what                 | max size
+# ---------------------+-----------
+# ceiling to horizon   | (rows+1)/2
+# tophalf              | 1
+# wall                 | rows
+# bottomhalf           | 1
+# horizon to floor     | (rows+1)/2
+#
+# in ${var:start:len} bash will copy the string before extracting the substring
+# so this could use a long string of $'▀\e[D\e[B' as tall as the screen, but that'd be slower
+# instead we use a specialised version that's shorter
+
+#                      <cursor><----sky----><------tophalf------><----wall---><------skygrass-----><-----bottomhalf----><---grass--->
+alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s"'
+[[ $COLORTERM ]] && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
+
 # dumb function that doesn't know where the horizon is
 # two versions because one case is painful
 # $1 column
 # $2 colour
 # $3 starting (half)row
 # $4 length
-
 dumbdrawcol () {
     # this is super annoying but it also deals with the case if height == 0
     # and rows % 2 == 1, which needs to print a halfblock of sky/grass
@@ -144,24 +162,7 @@ fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock+skygrass))
 ))
     # 7 == length of $' \e[D\e[B'
     # 9 == length of $'▀\e[D\e[B' in LANG=C
-
-    # this code is horrible because this function is more performance-intensive than it looks like,
-    # and it takes a ridiculous % of the time if you write it in a less atrocious way
-    #
-    # what                 | max size
-    # ---------------------+-----------
-    # ceiling to horizon   | (rows+1)/2
-    # tophalf              | 1
-    # wall                 | rows
-    # bottomhalf           | 1
-    # horizon to floor     | (rows+1)/2
-    #
-    # in ${var:start:len} bash will copy the string before extracting the substring
-    # so this could use a long string of $'▀\e[D\e[B' as tall as the screen, but that'd be slower
-    # instead we use a specialised version that's shorter
-
-    #       <cursor><----sky----><------tophalf------><----wall---><------skygrass-----><-----bottomhalf----><---grass--->
-    printf '\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s' \
+    drawcol \
         "$1" \
         "$sky"          "${halfspaces::7*fullsky}" \
         "$sky" "$2"     "${vblock::9*tophalfblock}" \
@@ -207,7 +208,8 @@ rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale)
 hit,dist=side==0?sdx-dx:sdy-dy,height=dist==0?rows*2:rows*2*scale/dist))
 
         # depth map
-        horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
+        256col horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
+        24bit  horidrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$height"
 
         # wall colours
         #horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$height"
