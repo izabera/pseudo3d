@@ -16,7 +16,7 @@ shopt -s extglob globasciiranges expand_aliases
 FPS=${FPS-30}
 
 gamesetup () {
-    stty -echo
+    stty -echo raw
 
     printf %b%.b \
         '\e[?1049h' 'alt screen on' \
@@ -33,7 +33,7 @@ gamesetup () {
             '\e[?25h'   'cursor on' \
             '\e[?1049l' 'alt screen off'
 
-        stty echo
+        stty echo sane
         dumpstats
     }
     trap exitfunc exit
