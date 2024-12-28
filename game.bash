@@ -164,8 +164,8 @@ gamesetup () {
 # so this could use a long string of $'▀\e[D\e[B' as tall as the screen, but that'd be slower
 # instead we use a specialised version that's shorter
 
-#                      <cursor><----sky----><------tophalf------><----wall---><------skygrass-----><-----bottomhalf----><---grass--->
-alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s"'
+#                      <cursor><----sky----><------tophalf------><----wall---><-----bottomhalf----><---grass--->
+alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s"'
 [[ $COLORTERM ]] && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
 
 # dumb function that doesn't know where the horizon is
@@ -175,15 +175,13 @@ alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e
 # $3 starting (half)row
 # $4 length
 dumbdrawcol () {
-    # this is super annoying but it also deals with the case if height == 0
-    # and rows % 2 == 1, which needs to print a halfblock of sky/grass
+    # this does not deal correctly with height == 0, so make sure all walls are close by
 ((
-skygrass=$4==0&&(rows%2==1),
 fullsky=$3/2,
-tophalfblock=($3%2==1)*(!skygrass),
-bottomhalfblock=(($3+$4)%2==1)*(!skygrass),
+tophalfblock=($3%2==1),
+bottomhalfblock=(($3+$4)%2==1),
 fullheight=($4-tophalfblock-bottomhalfblock)/2,
-fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock+skygrass))
+fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock))
 ))
     # 7 == length of $' \e[D\e[B'
     # 9 == length of $'▀\e[D\e[B' in LANG=C
@@ -192,7 +190,6 @@ fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock+skygrass))
         "$sky"          "${halfspaces::7*fullsky}" \
         "$sky" "$2"     "${vblock::9*tophalfblock}" \
         "$2"            "${vspaces::7*fullheight}" \
-        "$sky" "$grass" "${vblock::9*skygrass}" \
         "$2"   "$grass" "${vblock::9*bottomhalfblock}" \
         "$grass"        "${halfspaces::7*fullgrass}"
 }
