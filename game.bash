@@ -246,8 +246,9 @@ run_listeners
 
 if ((BENCHMARK)); then
     sincos "$angle"
-    for i in {1..100}; do drawframe; done
-    FRAME=100
+    START=${EPOCHREALTIME/.}
+    while ((FRAME++<BENCHMARK)); do drawframe; done
+    ((FRAME--))
     exit
 fi
 
