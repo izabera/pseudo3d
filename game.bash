@@ -213,7 +213,7 @@ rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale)
 hit,dist=side==0?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist))
 
         # depth map
-        256col dumbdrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))"          "$(((rows*2-h)/2))" "$h"
+        256col dumbdrawcol "$((x+1))" "$((z=2*dist/scale,255-(z>23?23:z)))"            "$(((rows*2-h)/2))" "$h"
         24bit  dumbdrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$(((rows*2-h)/2))" "$h"
 
         # wall colours (not supported in 24bit colour mode at the moment)
@@ -224,8 +224,8 @@ hit,dist=side==0?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist))
 drawframe () {
     if ((NTHR>1)); then
         dispatch 'drawrays > buffered."$tid"; printf x'
-        for ((t=0;t<NTHR;t++)) do read -rn1 -u"${notify[t]}"; done
         for ((t=0;t<NTHR;t++)) do
+            read -rn1 -u"${notify[t]}"
             read -rd '' 'buffered[t]' < buffered."$t"
         done
         printf %s "${buffered[@]}"
