@@ -197,14 +197,6 @@ fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock+skygrass))
         "$grass"        "${halfspaces::7*fullgrass}"
 }
 
-# knows where the horizon is
-horidrawcol () {
-    # $1 column
-    # $2 colour
-    # $3 height
-    dumbdrawcol "$1" "$2" "$(((rows*2-$3)/2))" "$3"
-}
-
 
 gamesetup
 
@@ -229,11 +221,11 @@ dx=rdx?scale*scale/adX:inf,
 dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
-hit,dist=side==0?sdx-dx:sdy-dy,height=dist<scale?rows*2:rows*2*scale/dist))
+hit,dist=side==0?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist))
 
         # depth map
-        256col horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
-        24bit  horidrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$height"
+        256col dumbdrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))"          "$(((rows*2-h)/2))" "$h"
+        24bit  dumbdrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$(((rows*2-h)/2))" "$h"
 
         # wall colours
         #horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$height"
