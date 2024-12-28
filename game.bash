@@ -197,9 +197,9 @@ map[mapX/scale*mapw+mapY/scale]||hit'
 
 drawrays () {
     # fov depends on aspect ratio
-    ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
+    ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4),begin=cols*tid/NTHR,end=cols*(tid+1)/NTHR))
 
-    for ((x=cols/NTHR*tid;x<cols/NTHR*(tid+1);x++)) do
+    for ((x=begin;x<end;x++)) do
 ((cameraX=2*x*scale/cols-scale,
 mapX=mx/scale*scale,mapY=my/scale*scale,
 rdx=cos+planeX*cameraX/scale,
