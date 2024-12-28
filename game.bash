@@ -157,12 +157,23 @@ LANG=C
 
 FPS=${FPS-30}
 
+dumpstats() {
+    echo "final resolution: ${cols}x$((rows*2))"
+    echo "colours: 256"
+    echo "fps target: $FPS"
+    echo "terminated after frame: $FRAME"
+    if ((BENCHMARK)); then
+        echo "time per frame: $(((${EPOCHREALTIME/.}-START)/FRAME))µs"
+    else
+        echo "skipped frames: $TOTALSKIPPED ($((TOTALSKIPPED*100/FRAME))%)"
+    fi
+}
 shopt -s extglob globasciiranges expand_aliases
 gamesetup () {
     stty -echo
     # save cursor pos -> alt screen -> hide cursor -> go to 1;1 -> delete screen
     printf '\e7\e[?1049h\e[?25l\e[H\e[J'
-    exitfunc () { printf '\e[?25h\e[?1049l\e[m\e8' >/dev/tty; stty echo; }
+    exitfunc () { printf '\e[?25h\e[?1049l\e[m\e8' >/dev/tty; stty echo; dumpstats; }
     trap exitfunc exit
 
     # size-dependent vars
@@ -361,13 +372,19 @@ horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
 }
 
 
-if ((BENCHMARK)); then sincos "$angle"; for i in {1..100}; do drawrays; done; exit; fi
+if ((BENCHMARK)); then
+    sincos "$angle"
+    START=${EPOCHREALTIME/.}
+    while ((FRAME++<BENCHMARK)); do drawrays; done
+    ((FRAME--))
+    exit
+fi
 
 alias nobuffer=${NOBUFFER+#}
 
 speed=0 rspeed=0
 while nextframe; do
-    ((totalskipped+=SKIPPED))
+    ((TOTALSKIPPED+=SKIPPED))
 
     for k in "${INPUT[@]}"; do
         case $k in
