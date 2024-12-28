@@ -202,8 +202,7 @@ horidrawcol () {
     # $1 column
     # $2 colour
     # $3 height
-    local h=$((${3-0}>rows*2?rows*2:${3-0}))
-    dumbdrawcol "$1" "$2" "$(((rows*2-h)/2))" "$h"
+    dumbdrawcol "$1" "$2" "$(((rows*2-$3)/2))" "$3"
 }
 
 
@@ -230,7 +229,7 @@ dx=rdx?scale*scale/adX:inf,
 dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
-hit,dist=side==0?sdx-dx:sdy-dy,height=dist==0?rows*2:rows*2*scale/dist))
+hit,dist=side==0?sdx-dx:sdy-dy,height=dist<scale?rows*2:rows*2*scale/dist))
 
         # depth map
         256col horidrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))" "$height"
