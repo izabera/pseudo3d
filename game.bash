@@ -190,7 +190,7 @@ hit='sdx<sdy?
 (sdy+=dy,mapY+=sy,side=1),
 map[mapX/scale*mapw+mapY/scale]||hit'
 
-drawraysbackend () {
+drawrays () {
     # fov depends on aspect ratio
     ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4)))
 
@@ -216,18 +216,9 @@ hit,dist=side==0?sdx-dx:sdy-dy,height=dist==0?rows*2:rows*2*scale/dist))
     done
 }
 
-drawrays () {
-    if ((NTHR>1)); then
-        drawraysbackend > buffered."$tid"
-        printf x
-    else
-        drawraysbackend
-    fi
-}
-
 drawframe () {
     if ((NTHR>1)); then
-        dispatch drawrays
+        dispatch 'drawrays > buffered."$tid"; printf x'
         for ((t=0;t<NTHR;t++)) do read -rn1 -u"${notify[t]}"; done
         for ((t=0;t<NTHR;t++)) do
             read -rd '' 'buffered[t]' < buffered."$t"
