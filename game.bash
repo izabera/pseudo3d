@@ -63,17 +63,18 @@ gamesetup () {
     }
     trap exitfunc exit
 
+    hblock=$'▀\e[D\e[B' # halfblock
+    sblock=$' \e[D\e[B' # "space"block (yes i'm very good at naming things)
+    hlen=${#hblock} slen=${#sblock}
+
     # size-dependent vars
     update_sizes () {
         ((rows=LINES,cols=COLUMNS))
 
         # see dumbdrawcol
-        vblock=$'▀\e[D\e[B'
-        blockfull=$vblock
-        blockhalf=$vblock
-        for ((i=0;i<rows;i++)) do blockfull+=$' \e[D\e[B'; done
-        for ((i=0;i<(rows+1)/2;i++)) do blockhalf+=$' \e[D\e[B'; done
-        printf -v hspaces '%*s' "$cols"
+        blockfull=$hblock blockhalf=$hblock
+        for ((i=0;i<rows;i++)) do blockfull+=$sblock; done
+        for ((i=0;i<(rows+1)/2;i++)) do blockhalf+=$sblock; done
     }
 
     # this condition is dumb
@@ -174,20 +175,15 @@ alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5
 # $4 length
 dumbdrawcol () {
     # this does not deal correctly with height == 0, so make sure all walls are close by
-((
+((hihalf=$3%2,lohalf=($3+$4)%2,
 ceiling=$3/2,
-tophalf=($3%2==1),
-bottomhalf=(($3+$4)%2==1),
-wall=($4-tophalf-bottomhalf)/2,
-floor=(rows-($3/2+wall+tophalf+bottomhalf))
-))
-    # 7 == length of $' \e[D\e[B'
-    # 9 == length of $'▀\e[D\e[B' in LANG=C
+wall=($4-hihalf-lohalf)/2,
+floor=rows-($3/2+wall+hihalf+lohalf)))
     drawcol \
         "$1" \
-        "$sky"          "${blockhalf:9:7*ceiling}" \
-        "$sky" "$2"     "${blockfull:9*!tophalf:tophalf*9+wall*7}" \
-        "$2"   "$grass" "${blockhalf:9*!bottomhalf:bottomhalf*9+floor*7}"
+        "$sky"          "${blockhalf:hlen:slen*ceiling}" \
+        "$sky" "$2"     "${blockfull:hlen*!hihalf:hlen*hihalf+slen*wall}" \
+        "$2"   "$grass" "${blockhalf:hlen*!lohalf:hlen*lohalf+slen*floor}"
 }
 
 
