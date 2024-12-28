@@ -68,11 +68,11 @@ gamesetup () {
         ((rows=LINES,cols=COLUMNS))
 
         # see dumbdrawcol
-        vspaces=
-        halfspaces=
         vblock=$'▀\e[D\e[B'
-        for ((i=0;i<rows;i++)) do vspaces+=$' \e[D\e[B'; done
-        for ((i=0;i<(rows+1)/2;i++)) do halfspaces+=$' \e[D\e[B'; done
+        blockfull=$vblock
+        blockhalf=$vblock
+        for ((i=0;i<rows;i++)) do blockfull+=$' \e[D\e[B'; done
+        for ((i=0;i<(rows+1)/2;i++)) do blockhalf+=$' \e[D\e[B'; done
         printf -v hspaces '%*s' "$cols"
     }
 
@@ -155,17 +155,15 @@ gamesetup () {
 # what                 | max size
 # ---------------------+-----------
 # ceiling to horizon   | (rows+1)/2
-# tophalf              | 1
 # wall                 | rows
-# bottomhalf           | 1
 # horizon to floor     | (rows+1)/2
 #
 # in ${var:start:len} bash will copy the string before extracting the substring
 # so this could use a long string of $'▀\e[D\e[B' as tall as the screen, but that'd be slower
 # instead we use a specialised version that's shorter
 
-#                      <cursor><----sky----><------tophalf------><----wall---><-----bottomhalf----><---grass--->
-alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s"'
+#                      <cursor><--ceiling--><--------wall-------><-------floor------->
+alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s"'
 [[ $COLORTERM ]] && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
 
 # dumb function that doesn't know where the horizon is
@@ -177,21 +175,19 @@ alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[48;5;%sm%s\e
 dumbdrawcol () {
     # this does not deal correctly with height == 0, so make sure all walls are close by
 ((
-fullsky=$3/2,
-tophalfblock=($3%2==1),
-bottomhalfblock=(($3+$4)%2==1),
-fullheight=($4-tophalfblock-bottomhalfblock)/2,
-fullgrass=(rows-($3/2+fullheight+tophalfblock+bottomhalfblock))
+ceiling=$3/2,
+tophalf=($3%2==1),
+bottomhalf=(($3+$4)%2==1),
+wall=($4-tophalf-bottomhalf)/2,
+floor=(rows-($3/2+wall+tophalf+bottomhalf))
 ))
     # 7 == length of $' \e[D\e[B'
     # 9 == length of $'▀\e[D\e[B' in LANG=C
     drawcol \
         "$1" \
-        "$sky"          "${halfspaces::7*fullsky}" \
-        "$sky" "$2"     "${vblock::9*tophalfblock}" \
-        "$2"            "${vspaces::7*fullheight}" \
-        "$2"   "$grass" "${vblock::9*bottomhalfblock}" \
-        "$grass"        "${halfspaces::7*fullgrass}"
+        "$sky"          "${blockhalf:9:7*ceiling}" \
+        "$sky" "$2"     "${blockfull:9*!tophalf:tophalf*9+wall*7}" \
+        "$2"   "$grass" "${blockhalf:9*!bottomhalf:bottomhalf*9+floor*7}"
 }
 
 
@@ -224,8 +220,8 @@ hit,dist=side==0?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist))
         256col dumbdrawcol "$((x+1))" "$((z=2*dist/scale,(255-(z>23?23:z))))"          "$(((rows*2-h)/2))" "$h"
         24bit  dumbdrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$(((rows*2-h)/2))" "$h"
 
-        # wall colours
-        #horidrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$height"
+        # wall colours (not supported in 24bit colour mode at the moment)
+        #dumbdrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$(((rows*2-h)/2))" "$h"
     done
 }
 
