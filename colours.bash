@@ -22,7 +22,7 @@ for ((i=0;i<${#walls[@]};i+=3)) do
 done
 makecolours
 
-if [[ $COLORTERM ]]; then
+if [[ $COLORTERM = *@(truecolor|24bit)* ]]; then
     sky='208;208;208' grass='78;78;78'
     alias 256col='#' 24bit=
 else

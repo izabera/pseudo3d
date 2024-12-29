@@ -156,7 +156,7 @@ gamesetup () {
 
 #                      <cursor><--ceiling--><--------wall-------><-------floor------->
 alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s"'
-[[ $COLORTERM ]] && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
+[[ $COLORTERM = *@(truecolor|24bit)* ]] && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
 
 # dumb function that doesn't know where the horizon is
 # two versions because one case is painful
