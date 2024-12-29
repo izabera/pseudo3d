@@ -41,6 +41,11 @@ shopt -s extglob globasciiranges expand_aliases
 FPS=${FPS-30}
 
 gamesetup () {
+    if [[ ! ( $TERM && -t 0 && -t 1 ) ]]; then
+        echo you need a terminal to run this >&2
+        exit 1
+    fi
+
     stty -echo raw
 
     printf %b%.b \
@@ -48,7 +53,14 @@ gamesetup () {
         '\e[?25l'   'cursor off'    \
         '\e[?1004h' 'report focus'  \
         '\e[H'      'go to 1;1'     \
-        '\e[J'      'erase screen'
+        '\e[J'      'erase screen'  \
+        '\e[?u'     'kitty kbd'     \
+        '\e[c'      'da1'
+
+    IFS=$'\e[;' read -rdc -a arr
+    if [[ ${arr[*]} = *u* ]]; then
+        kitty=1
+    fi
 
     exitfunc () {
         dispatch exit
@@ -77,35 +89,16 @@ gamesetup () {
         for ((i=0;i<(rows+1)/2;i++)) do blockhalf+=$sblock; done
     }
 
-    # this condition is dumb
-    # previous things already rely on this running in a terminal
-    if [[ $TERM ]]; then
-        # kitty kbd proto -> da1
-        printf '\e[?u\e[c'
-        IFS=$'\e[;' read -rdc -a arr
-        if [[ ${arr[*]} = *u* ]]; then
-            kitty=1
-        fi
-        get_term_size() {
-            __winch=0
-            printf '\e[%s\e[6n' '9999;9999H'
-            IFS='[;' read -rdR _ LINES COLUMNS
-            dispatch "${LINES@A} ${COLUMNS@A}"
-            update_sizes
-            dispatch update_sizes
-        }
-        get_term_size
-        trap __winch=1 WINCH
-        __term=1
-    else
-        __term=0
-        get_term_size() {
-            LINES=24 COLUMNS=80
-            dispatch "${LINES@A} ${COLUMNS@A}"
-            update_sizes
-            dispatch update_sizes
-        }
-    fi
+    get_term_size() {
+        __winch=0
+        printf '\e[%s\e[6n' '9999;9999H'
+        IFS='[;' read -rdR _ LINES COLUMNS
+        dispatch "${LINES@A} ${COLUMNS@A}"
+        update_sizes
+        dispatch update_sizes
+    }
+    get_term_size
+    trap __winch=1 WINCH
 
     declare -gA __keys=(
         [A]=UP [B]=DOWN [C]=RIGHT [D]=LEFT
@@ -144,9 +137,7 @@ gamesetup () {
                 *) __input=${__input:1} # this was some non ascii unicode character (unsupported for now) or some weird ctrl character
             esac
         done
-        if ((__term)); then
-            if ((__winch)); then get_term_size; fi
-        fi
+        if ((__winch)); then get_term_size; fi
     }
 }
 
