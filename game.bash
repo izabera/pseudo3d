@@ -190,6 +190,7 @@ else
     alias depthmap='#' nodepthmap=
 fi
 
+far=$((scale*23/2)) # 11.5 steps away is too far too see
 drawrays () {
     # fov depends on aspect ratio
     ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4),begin=cols*tid/NTHR,end=cols*(tid+1)/NTHR))
@@ -205,15 +206,19 @@ dx=rdx?scale*scale/adX:inf,
 dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
-hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist))
+hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,dist=dist>far?far:dist))
+
+        # this is not at all how light works but it looks ok
+        # dist 0 -> colour 100%
+        # dist 11.5 -> colour 0%
 
         # depth map
-        depthmap 256col dumbdrawcol "$((x+1))" "$((z=2*dist/scale,255-(z>23?23:z)))"            "$(((rows*2-h)/2))" "$h"
-        depthmap 24bit  dumbdrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$(((rows*2-h)/2))" "$h"
+        depthmap 256col dumbdrawcol "$((x+1))" "$((255-2*dist/scale))"          "$(((rows*2-h)/2))" "$h"
+        depthmap 24bit  dumbdrawcol "$((x+1))" "$((z=255-22*dist/scale));$z;$z" "$(((rows*2-h)/2))" "$h"
 
         # wall colours
         nodepthmap 256col dumbdrawcol "$((x+1))" "${col256[w+side*wallcount]}" "$(((rows*2-h)/2))" "$h"
-        nodepthmap 24bit  dumbdrawcol "$((x+1))" "${wallsrgb[w+side*wallcount]}" "$(((rows*2-h)/2))" "$h"
+        nodepthmap 24bit  dumbdrawcol "$((x+1))" "$((wallsr[w+=side*wallcount]*(far-dist)/far));$((wallsg[w]*(far-dist)/far));$((wallsb[w]*(far-dist)/far))" "$(((rows*2-h)/2))" "$h"
     done
 }
 
