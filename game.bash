@@ -178,11 +178,18 @@ floor=rows-($3/2+wall+hihalf+lohalf)))
 
 gamesetup
 
-# horrible horrible horrible horrible
-hit='sdx<sdy?
-(sdx+=dx,mapX+=sx,side=0):
-(sdy+=dy,mapY+=sy,side=1),
-map[mapX/scale*mapw+mapY/scale]||hit'
+# the wall hit calculation is a horrible recursive expansion
+# it is a lot faster than a loop
+# when displaying colours, it also stores the right colour in the variable w
+hit='(side=sdx<sdy)?(sdx+=dx,mapX+=sx):(sdy+=dy,mapY+=sy),'
+
+if [[ $DEPTH ]]; then
+    hit+='map[mapX/scale*mapw+mapY/scale]||hit'
+    alias depthmap= nodepthmap='#'
+else
+    hit+='(w=map[mapX/scale*mapw+mapY/scale])||hit'
+    alias depthmap='#' nodepthmap=
+fi
 
 drawrays () {
     # fov depends on aspect ratio
@@ -199,14 +206,15 @@ dx=rdx?scale*scale/adX:inf,
 dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
-hit,dist=side==0?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist))
+hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist))
 
         # depth map
-        256col dumbdrawcol "$((x+1))" "$((z=2*dist/scale,255-(z>23?23:z)))"            "$(((rows*2-h)/2))" "$h"
-        24bit  dumbdrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$(((rows*2-h)/2))" "$h"
+        depthmap 256col dumbdrawcol "$((x+1))" "$((z=2*dist/scale,255-(z>23?23:z)))"            "$(((rows*2-h)/2))" "$h"
+        depthmap 24bit  dumbdrawcol "$((x+1))" "$((z=22*dist/scale,z=255-(z>255?255:z)));$z;$z" "$(((rows*2-h)/2))" "$h"
 
-        # wall colours (not supported in 24bit colour mode at the moment)
-        #dumbdrawcol "$((x+1))" "${colours[map[mapX/scale*mapw+mapY/scale]+(side*wallcount)]}" "$(((rows*2-h)/2))" "$h"
+        # wall colours
+        nodepthmap 256col dumbdrawcol "$((x+1))" "${col256[w+side*wallcount]}" "$(((rows*2-h)/2))" "$h"
+        nodepthmap 24bit  dumbdrawcol "$((x+1))" "${wallsrgb[w+side*wallcount]}" "$(((rows*2-h)/2))" "$h"
     done
 }
 

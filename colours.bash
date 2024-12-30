@@ -1,7 +1,6 @@
 # walk around the edges of the 6x6x6 cube that don't touch either white or black
 hues=(196 197 198 199 200 201 165 129 93 57 21 27 33 39 45 51 50 49 48 47 46 82 118 154 190 226 220 214 208 202)
 
-# colours are hard and i don't know what i'm doing
 walls=(
     1 2 2
     3 4 1
@@ -13,12 +12,25 @@ walls=(
     1 1 5
     0 0 4
 )
-wallcount=$((${#walls[@]}/3+1))
+
+# colours are hard and i don't know what i'm doing
+wallsr=(0  32  34 105 107 155 238 232 202 175)
+wallsg=(0 223 201 195 114  30  85 116 136 229)
+wallsb=(0  20 135 230 230 235 196 123  34  32)
+
+wallcount=${#wallsr[@]}
 
 makecolours ()
-for ((i=0;i<${#walls[@]};i+=3)) do
-    ((colours[1+i/3]          =walls[i]  *6*6+walls[i+1]  *6+walls[i+2]  +16))
-    ((colours[1+i/3+wallcount]=walls[i]/2*6*6+walls[i+1]/2*6+walls[i+2]/2+16))
+for ((i=0;i<${#walls[@]};i++)) do
+    ((wallsr[i+wallcount]=wallsr[i]*3/4))
+    ((wallsg[i+wallcount]=wallsg[i]*3/4))
+    ((wallsb[i+wallcount]=wallsb[i]*3/4))
+
+    ((col256[i]          =16+(wallsr[i]+28)    /55*6*6+(wallsg[i]+28)    /55*6+(wallsb[i]+28)    /55))
+    ((col256[i+wallcount]=16+(wallsr[i]+28)*3/4/55*6*6+(wallsg[i]+28)*3/4/55*6+(wallsb[i]+28)*3/4/55))
+
+    wallsrgb[i]="${wallsr[i]};${wallsg[i]};${wallsb[i]}"
+    wallsrgb[i+wallcount]="${wallsr[i+wallcount]};${wallsg[i+wallcount]};${wallsb[i+wallcount]}"
 done
 makecolours
 
