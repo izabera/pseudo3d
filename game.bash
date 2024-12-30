@@ -81,8 +81,6 @@ gamesetup () {
 
     # size-dependent vars
     update_sizes () {
-        ((rows=LINES,cols=COLUMNS))
-
         # see dumbdrawcol
         blockfull=$hblock blockhalf=$hblock
         for ((i=0;i<rows;i++)) do blockfull+=$sblock; done
@@ -92,8 +90,8 @@ gamesetup () {
     get_term_size() {
         __winch=0
         printf '\e[%s\e[6n' '9999;9999H'
-        IFS='[;' read -rdR _ LINES COLUMNS
-        dispatch "${LINES@A} ${COLUMNS@A}"
+        IFS='[;' read -rdR _ rows cols
+        dispatch "${rows@A} ${cols@A}"
         update_sizes
         dispatch update_sizes
     }
