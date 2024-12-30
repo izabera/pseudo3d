@@ -1,30 +1,29 @@
 #!/usr/bin/env bash
 
-if [[ $EXPERIMENTAL ]]; then
-    # bash calls REAP unconditionally after executing the command in every loop construct
-    # https://git.savannah.gnu.org/cgit/bash.git/tree/execute_cmd.c?id=c5c97b371044a44b701b6efa35984a3e1956344e#n3702
-    # #define REAP() \
-    #   do \
-    #     { \
-    #       if (job_control == 0 || interactive_shell == 0) \
-    #         reap_dead_jobs (); \
-    #     } \
-    #   while (0)
-    #
-    # reap_dead_jobs calls mark_dead_jobs_as_notified
-    #
-    # result: if you've ever forked in this shell session, bash will block sigchld
-    # after executing the body of every loop, and likely unblock it immediately after
-    #
-    # the only way to avoid this is to be in an interactive shell with job control
-    # note: replacing loops with recursion makes things a *lot* slower
-    #
-    # this should be safe/correct, but i'm not fully sure
-    # it is faster in benchmarks so it stays
-    #
-    # this is the dumbest thing i've ever written
-    [[ $- = *i* && $- = *m* ]] || exec bash --norc --noediting --noprofile -im +H +o history ./game.bash
-fi
+# bash calls REAP unconditionally after executing the command in every loop construct
+# https://git.savannah.gnu.org/cgit/bash.git/tree/execute_cmd.c?id=c5c97b371044a44b701b6efa35984a3e1956344e#n3702
+# #define REAP() \
+#   do \
+#     { \
+#       if (job_control == 0 || interactive_shell == 0) \
+#         reap_dead_jobs (); \
+#     } \
+#   while (0)
+#
+# reap_dead_jobs calls mark_dead_jobs_as_notified
+#
+# result: if you've ever forked in this shell session, bash will block sigchld
+# after executing the body of every loop, and likely unblock it immediately after
+#
+# the only way to avoid this is to be in an interactive shell with job control
+# note: replacing loops with recursion makes things a *lot* slower
+#
+# this should be safe/correct, but i'm not fully sure
+# it is faster in benchmarks so it stays
+#
+# this is the dumbest thing i've ever written
+[[ $- = *i* && $- = *m* ]] || exec bash --norc --noediting --noprofile -im +H +o history ./game.bash
+
 mapselect=${mapselect-2}
 source ./maths.bash
 source ./maps.bash
