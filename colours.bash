@@ -35,9 +35,17 @@ done
 makecolours
 
 if [[ $COLORTERM = *@(truecolor|24bit)* ]]; then
-    sky='208;208;208' grass='78;78;78'
+    if [[ $DEPTH ]]; then
+        sky='208;208;208' grass='78;78;78'
+    else
+        sky='142;229;238' grass='17;124;19'
+    fi
     alias 256col='#' 24bit=
 else
-    sky=252 grass=239
+    if [[ $DEPTH ]]; then
+        sky=252 grass=239
+    else
+        sky=152 grass=28
+    fi
     alias 256col= 24bit='#'
 fi

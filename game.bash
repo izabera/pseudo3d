@@ -259,10 +259,10 @@ while nextframe; do
         esac
     done
 
-    ((angle+=rspeed*2,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
+    ((angle+=rspeed,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
     sincos "$angle"
-    ((tx=mx+cos*speed/scale/3,map[tx/scale*mapw+my/scale]==0&&(mx=tx),
-      ty=my+sin*speed/scale/3,map[mx/scale*mapw+ty/scale]==0&&(my=ty),
-      speed=speed*2/3,rspeed=rspeed*2/3))
+    ((tx=mx+cos*speed/scale/6,map[tx/scale*mapw+my/scale]==0&&(mx=tx),
+      ty=my+sin*speed/scale/6,map[mx/scale*mapw+ty/scale]==0&&(my=ty),
+      speed=speed*3/4,rspeed=rspeed*3/4))
     drawframe
 done

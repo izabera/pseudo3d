@@ -1,6 +1,6 @@
 # a raycaster in bash
 
-https://github.com/user-attachments/assets/51c07747-ff7b-4994-9a57-7657f695ca10
+https://github.com/user-attachments/assets/fe561895-eb83-4337-89da-e3ba22bee10b
 
 more screenshots/vidoes at https://imgur.com/a/izas-wolfenstein-bash-journey-bAy5zhp
 
