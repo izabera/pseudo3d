@@ -1,10 +1,14 @@
 dumpstats() {
+    END=${EPOCHREALTIME/.}
     echo "final resolution: ${cols}x$((rows*2))"
+    echo "terminal: $TERM"
+    type xprop &>/dev/null &&
+    xprop -id "$(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f 5)" WM_CLASS
     echo "colours: ${COLORTERM-256}"
     echo "fps target: $FPS"
     echo "terminated after frame: $FRAME"
     if ((BENCHMARK)); then
-        echo "time per frame: $(((${EPOCHREALTIME/.}-START)/FRAME))µs"
+        echo "time per frame: $(((END-START)/FRAME))µs"
     else
         echo "skipped frames: $TOTALSKIPPED ($((TOTALSKIPPED*100/FRAME))%)"
     fi
