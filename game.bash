@@ -46,20 +46,19 @@ gamesetup () {
     fi
 
     stty -echo raw
-
     printf %b%.b \
-        '\e[?1049h' 'alt screen on' \
-        '\e[?25l'   'cursor off'    \
-        '\e[?1004h' 'report focus'  \
-        '\e[H'      'go to 1;1'     \
-        '\e[J'      'erase screen'  \
-        '\e[?u'     'kitty kbd'     \
-        '\e[c'      'da1'
+        '\e[?1049h'  'alt screen on'        \
+        '\e[?25l'    'cursor off'           \
+        '\e[?1004h'  'report focus'         \
+        '\e[H'       'go to 1;1'            \
+        '\e[J'       'erase screen'         \
+        '\e[?u'      'kitty kbd proto'      \
+        '\e[?2026$p' 'synchronised output'  \
+        '\e[c'       'da1'
 
-    IFS=$'\e[;' read -rdc -a arr
-    if [[ ${arr[*]} = *u* ]]; then
-        kitty=1
-    fi
+    read -rdc
+    [[ ! $REPLY = *u* ]]; kitty=$?
+    [[ ! $REPLY = *'2026;2'* ]]; sync=$?
 
     exitfunc () {
         dispatch exit
