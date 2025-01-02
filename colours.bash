@@ -34,7 +34,7 @@ for ((i=0;i<${#walls[@]};i++)) do
 done
 makecolours
 
-if [[ $COLORTERM = *@(truecolor|24bit)* ]]; then
+if ((truecolor)); then
     if [[ $DEPTH ]]; then
         sky='208;208;208' grass='78;78;78'
     else

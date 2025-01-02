@@ -1,17 +1,79 @@
 dumpstats() {
+    # see tests in https://gist.github.com/izabera/3d1e5dfabbe80b3f5f2e50ec6f56eadb
     END=${EPOCHREALTIME/.}
     echo "final resolution: ${cols}x$((rows*2))"
-    echo "terminal: $TERM"
-    type xprop &>/dev/null &&
-    xprop -id "$(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f 5)" WM_CLASS
-    echo "colours: ${COLORTERM-256}"
     echo "fps target: $FPS"
     echo "terminated after frame: $FRAME"
+
     if ((BENCHMARK)); then
         echo "time per frame: $(((END-START)/FRAME))µs"
     else
         echo "skipped frames: $TOTALSKIPPED ($((TOTALSKIPPED*100/FRAME))%)"
     fi
+
+    echo "terminal: $TERM"
+    echo "\$COLORTERM: $COLORTERM"
+    if [[ $DISPLAY ]] && type xprop &>/dev/null; then
+        IFS=' ' read -r _ _ _ _ self _ < <(xprop -root _NET_ACTIVE_WINDOW)
+        IFS='"' read -r _ _ _ class _ < <(xprop -id "$self" WM_CLASS)
+    else
+        class=unknown
+    fi
+    echo "wm class: $class"
+
+    tf=(false true)
+    colours=(256 truecolor)
+
+    echo "colours: ${colours[truecolor]}"
+    echo "kitty keyboard proto support: ${tf[kitty]}"
+    echo "synchronised output support: ${tf[sync]}"
+
+    #      r      |     g     |     b     | rdx | gdx | bdx
+    # ------------+-----------+-----------+-----+-----+----
+    # max         | 0->max    | 0         |  0  |  1  |  0
+    # max->0      |    max    | 0         | -1  |  0  |  0
+    #      0      |    max    | 0->max    |  0  |  0  |  1
+    #      0      |    max->0 |    max    |  0  | -1  |  0
+    #      0->max |         0 |    max    |  1  |  0  |  0
+    #         max |         0 |    max->0 |  0  |  0  | -1
+
+    # walk around an rgb cube on the edges that don't include black or white
+    walkcube () {
+        local max=$(($1-1)) fmt=$2
+        local rdx=4 gdx=2 bdx=0
+        local r=max g=0 b=0
+        local i j
+
+        for (( i = 0; i < 6; i++ )) do
+            for (( j = 0; j < max; j++ )) do
+                printf -v 'hues[i*max+j]' "$fmt" \
+                    "$(( r += (rdx%6==2)-(rdx%6==5) ))" \
+                    "$(( g += (gdx%6==2)-(gdx%6==5) ))" \
+                    "$(( b += (bdx%6==2)-(bdx%6==5) ))"
+            done
+            (( rdx = (rdx+1) % 6, gdx = (gdx+1) % 6, bdx = (bdx+1) % 6 ))
+        done
+    }
+
+    declare -ai hues
+    walkcube 6 '16 + %d*6*6 + %d*6 + %d'
+
+    printf '256 colour test: '
+    printf '\e[38;5;%s;48;5;%sm▌' "${hues[@]}"
+    printf '\e[m\n'
+
+    unset hues
+    walkcube 256 '%d;%d;%d'
+
+    h=${#hues[@]}
+    for (( i = 0; i < h; i++ )) do
+        (( i % (h/COLUMNS) )) && unset 'hues[i]'
+    done
+
+    printf '24bit colour test: '
+    printf '\e[38;2;%s;48;2;%sm▌' "${hues[@]}"
+    printf '\e[m\n'
+    ((truecolor)) || echo "if the 24bit colour test looks ok, set COLORTERM=truecolor"
 }
 
 drawmsgs () {

@@ -27,7 +27,6 @@
 mapselect=${mapselect-2}
 source ./maths.bash
 source ./maps.bash
-source ./colours.bash
 source ./util.bash
 source ./dispatch.bash
 
@@ -46,19 +45,28 @@ gamesetup () {
     fi
 
     stty -echo raw
+
+    # this expects a bunch of modes to always be supported, and queries support for some less common ones
     printf %b%.b \
-        '\e[?1049h'  'alt screen on'        \
-        '\e[?25l'    'cursor off'           \
-        '\e[?1004h'  'report focus'         \
-        '\e[H'       'go to 1;1'            \
-        '\e[J'       'erase screen'         \
-        '\e[?u'      'kitty kbd proto'      \
-        '\e[?2026$p' 'synchronised output'  \
-        '\e[c'       'da1'
+        '\e[?1049h'         'alt screen on'        \
+        '\e[?25l'           'cursor off'           \
+        '\e[?1004h'         'report focus'         \
+        '\e[H'              'go to 1;1'            \
+        '\e[J'              'erase screen'         \
+        '\e[?u'             'kitty kbd proto'      \
+        '\e[?2026$p'        'synchronised output'  \
+        '\e[m'              'reset colours'        \
+        '\e[38;5;123m'      '256 colour fg'        \
+        '\e[38;2;45;67;89m' 'truecolor fg'         \
+        '\eP$qm\x1b\\'      'decrqss m'            \
+        '\e[c'              'da1'                  \
+        '\e[m'              'reset colours again'
 
     read -rdc
-    [[ ! $REPLY = *u* ]]; kitty=$?
-    [[ ! $REPLY = *'2026;2'* ]]; sync=$?
+    # see tests in https://gist.github.com/izabera/3d1e5dfabbe80b3f5f2e50ec6f56eadb
+    ! [[ $REPLY = *u* ]]; kitty=$?
+    ! [[ $REPLY = *'2026;2'* ]]; sync=$?
+    ! [[ $COLORTERM = *@(24bit|truecolor)* || $REPLY = *38*2*45*67*89*m* ]]; truecolor=$?
 
     exitfunc () {
         dispatch exit
@@ -137,6 +145,9 @@ gamesetup () {
     }
 }
 
+gamesetup
+source ./colours.bash
+
 # this code is horrible because this function is more performance-intensive than it looks like,
 # and it takes a ridiculous % of the time if you write it in a less atrocious way
 #
@@ -152,7 +163,7 @@ gamesetup () {
 
 #                      <cursor><--ceiling--><--------wall-------><-------floor------->
 alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s"'
-[[ $COLORTERM = *@(truecolor|24bit)* ]] && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
+((truecolor)) && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
 
 # dumb function that doesn't know where the horizon is
 # two versions because one case is painful
@@ -173,8 +184,6 @@ floor=rows-($3/2+wall+hihalf+lohalf)))
         "$2"   "$grass" "${blockhalf:hlen*!lohalf:hlen*lohalf+slen*floor}"
 }
 
-
-gamesetup
 
 # the wall hit calculation is a horrible recursive expansion
 # it is a lot faster than a loop
@@ -222,6 +231,7 @@ hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,dist=dist>far?
 }
 
 drawframe () {
+    ((sync)) && printf '\e[?2026h'
     if ((NTHR>1)); then
         dispatch 'drawrays > buffered."$tid"; printf x'
         for ((t=0;t<NTHR;t++)) do
@@ -232,6 +242,7 @@ drawframe () {
     else
         drawrays
     fi
+    ((sync)) && printf '\e[?2026l'
 }
 
 run_listeners
