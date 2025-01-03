@@ -31,7 +31,7 @@ source ./util.bash
 source ./dispatch.bash
 
 
-LANG=C
+LANG=C LC_ALL=C
 shopt -s extglob globasciiranges expand_aliases
 
 # for the basic bash game loop: https://gist.github.com/izabera/5e0cc5fcd598f866eb7c6cc955ef3409
