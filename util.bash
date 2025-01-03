@@ -112,7 +112,7 @@ dumpstats() {
 
     h=${#hues[@]}
     for (( i = 0; i < h; i++ )) do
-        (( i % (h/COLUMNS) )) && unset 'hues[i]'
+        (( i % (h/cols) )) && unset 'hues[i]'
     done
 
     printf '24bit colour test: '
