@@ -1,10 +1,10 @@
 dumpstats() {
     # see tests in https://gist.github.com/izabera/3d1e5dfabbe80b3f5f2e50ec6f56eadb
     END=${EPOCHREALTIME/.}
-    title () { printf '\e[38;5;226m==== %s ====\e[m\n' "$@"; }
+    title () { printf '\e[38;5;201m==== %s ====\e[m\n' "$@"; }
     info () {
         local -A colours=([true]=46 [false]=196)
-        printf '%s: \e[38;5;%sm%s\e[m\n' "$1" "${colours[${2:-0}]-51}" "$2"
+        printf '%s: \e[38;5;%sm%s\e[m\n' "$1" "${colours[${2:-0}]-33}" "$2"
     }
     note () { echo "note: $*"; }
 
@@ -39,8 +39,8 @@ dumpstats() {
         variance=$((sum/framecount))
 
         # newton's method
-        x=$((variance/2)) prev=$x
-        while true; do
+        x=$((variance/2))
+        while ((x)); do
             ((prev=x,x=(x+variance/x)/2,x==prev)) && break
         done
         stddev=$x
@@ -117,7 +117,7 @@ dumpstats() {
     printf '24bit colour test: '
     printf '\e[38;2;%s;48;2;%sm▌' "${hues[@]}"
     printf '\e[m\n'
-    ((truecolor)) || echo "if the 24bit colour test looks ok, set COLORTERM=truecolor"
+    ((truecolor)) || note 'if the 24bit colour test looks ok, set COLORTERM=truecolor'
 }
 
 drawmsgs () {

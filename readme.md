@@ -68,7 +68,9 @@ use the arrow keys to rotate and move around, and q to quit
 - a: open an issue please
 
 - q: my cpu heats up like crazy/my computer from 2005 slows down to a crawl
-- a: try to set the env variable FPS to something less than 30
+- a: try to reduce the resolution, or set the env variable FPS to something less
+     than 30.  also, microsoft defender is known to do everything it can to tank
+     any resemblance of performance, so maybe disable it
 
 - q: it doesn't work on my bash < 5
 - a: yep
