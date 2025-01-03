@@ -1,32 +1,76 @@
 dumpstats() {
     # see tests in https://gist.github.com/izabera/3d1e5dfabbe80b3f5f2e50ec6f56eadb
     END=${EPOCHREALTIME/.}
-    echo "final resolution: ${cols}x$((rows*2))"
-    echo "fps target: $FPS"
-    echo "terminated after frame: $FRAME"
+    title () { printf '\e[38;5;226m==== %s ====\e[m\n' "$@"; }
+    info () {
+        local -A colours=([true]=46 [false]=196)
+        printf '%s: \e[38;5;%sm%s\e[m\n' "$1" "${colours[${2:-0}]-51}" "$2"
+    }
+    note () { echo "note: $*"; }
+
+    title 'frame stats'
+    info 'final resolution' "${cols}x$((rows*2))"
+    info 'fps target' "$FPS"
+    info 'terminated after frame' "$FRAME"
 
     if ((BENCHMARK)); then
-        echo "time per frame: $(((END-START)/FRAME))µs"
+        info 'time per frame' "$(((END-START)/FRAME))µs"
     else
-        echo "skipped frames: $TOTALSKIPPED ($((TOTALSKIPPED*100/FRAME))%)"
+        info 'skipped frames' "$TOTALSKIPPED ($((TOTALSKIPPED*100/FRAME))%)"
+    fi
+    if ((${#frametimes[@]})); then
+        # basic counting sort
+        sorted=() sum=0 counted=()
+        for n in "${!frametimes[@]}"; do counted[n]=${frametimes[$n]}; done
+        for n in "${!counted[@]}"; do
+            for ((i=0;i<counted[n];i++)) do
+                sorted+=("$n")
+                ((sum+=n))
+            done
+        done
+
+        min=${sorted[0]} max=${sorted[-1]}
+        framecount=${#sorted[@]}
+        mean=$((sum/framecount))
+        sum=0 sqdiffs=()
+        for i in "${!sorted[@]}"; do
+            ((sum+=(sqdiffs[i]=(sorted[i]-mean)**2)))
+        done
+        variance=$((sum/framecount))
+
+        # newton's method
+        x=$((variance/2)) prev=$x
+        while true; do
+            ((prev=x,x=(x+variance/x)/2,x==prev)) && break
+        done
+        stddev=$x
+
+        info 'fastest frame' "$min"µs
+        info 'slowest frame' "$max"µs
+        info 'average frame' "$mean"µs
+        info '95th %ile' "${sorted[framecount*95/100]}"µs
+        info 'std dev' "$stddev"µs
+        note 'times are collected before drawing to the terminal,' \
+             'and do not account for any slowness induced by it'
     fi
 
-    echo "terminal: $TERM"
-    echo "\$COLORTERM: $COLORTERM"
+    title 'terminal info'
+    info '$TERM' "$TERM"
+    info '$COLORTERM' "$COLORTERM"
     if [[ $DISPLAY ]] && type xprop &>/dev/null; then
         IFS=' ' read -r _ _ _ _ self _ < <(xprop -root _NET_ACTIVE_WINDOW)
         IFS='"' read -r _ _ _ class _ < <(xprop -id "$self" WM_CLASS)
     else
         class=unknown
     fi
-    echo "wm class: $class"
+    info 'wm class' "$class"
 
     tf=(false true)
     colours=(256 truecolor)
 
-    echo "colours: ${colours[truecolor]}"
-    echo "kitty keyboard proto support: ${tf[kitty]}"
-    echo "synchronised output support: ${tf[sync]}"
+    info colours "${colours[truecolor]}"
+    info 'kitty keyboard proto support' "${tf[kitty]}"
+    info 'synchronised output support' "${tf[sync]}"
 
     #      r      |     g     |     b     | rdx | gdx | bdx
     # ------------+-----------+-----------+-----+-----+----

@@ -230,14 +230,17 @@ hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,dist=dist>far?
     done
 }
 
+declare -A frametimes
 drawframe () {
     ((sync)) && printf '\e[?2026h'
     if ((NTHR>1)); then
+        frame_start=${EPOCHREALTIME/.}
         dispatch 'drawrays > buffered."$tid"; printf x'
         for ((t=0;t<NTHR;t++)) do
             read -rn1 -u"${notify[t]}"
             read -rd '' 'buffered[t]' < buffered."$t"
         done
+        ((frametimes[$((${EPOCHREALTIME/.}-frame_start))]++))
         printf %s "${buffered[@]}"
     else
         drawrays

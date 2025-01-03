@@ -75,7 +75,7 @@ use the arrow keys to rotate and move around, and q to quit
 
 - q: is this code all pure bash?
 - a: no.  it also calls stty once at startup to disable echo, and once at exit
-     to re enable it
+     to re enable it.  and some stats at the end are collected via other tools
 
 ### roadmap
 
@@ -90,4 +90,7 @@ use the arrow keys to rotate and move around, and q to quit
 - [ ] textures
 - [ ] sprites
 - [ ] objects/enemies
+- [ ] particles
 - [ ] sound
+- [ ] better perf
+- [ ] multiplayer
