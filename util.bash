@@ -50,7 +50,7 @@ dumpstats() {
         info 'average frame' "$mean"µs
         info '95th %ile' "${sorted[framecount*95/100]}"µs
         info 'std dev' "$stddev"µs
-        info 'your bash can render up to' "$((1000000/mean))fps"
+        info 'your bash can render' "$((1000000/max))-$((1000000/mean))fps"
         note 'times are collected before drawing to the terminal,' \
              'and do not account for any slowness induced by it'
     fi
