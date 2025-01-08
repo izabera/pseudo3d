@@ -68,6 +68,13 @@ gamesetup () {
     ! [[ $REPLY = *'2026;2'* ]]; sync=$?
     ! [[ $COLORTERM = *@(24bit|truecolor)* || $REPLY = *38*2*45*67*89*m* ]]; truecolor=$?
 
+    # disambiguate   1
+    # eventtypes     2
+    # altkeys        4
+    # allescapes     8
+    # associatedtext 16
+    ((kitty)) && printf '\e[>11u'
+
     exitfunc () {
         dispatch exit
         wait
@@ -75,6 +82,8 @@ gamesetup () {
             '\e[?1004l' 'focus off' \
             '\e[?25h'   'cursor on' \
             '\e[?1049l' 'alt screen off'
+
+        ((kitty)) && printf %b%.b >/dev/tty '\e[<u'
 
         stty echo sane
         dumpstats
@@ -106,15 +115,30 @@ gamesetup () {
 
     declare -gA __keys=(
         [A]=UP [B]=DOWN [C]=RIGHT [D]=LEFT
+        [1A]=UP [1B]=DOWN [1C]=RIGHT [1D]=LEFT # makes kitty slightly easier
         [' ']=SPACE [$'\t']=TAB
         [$'\n']=ENTER [$'\r']=ENTER
         [$'\177']=BACKSLASH [$'\b']=BACKSLASH
     )
+    for i in {32..126}; do
+        printf -v oct %03o "$i"
+        printf -v "__keys[${i}u]" "\\$oct"
+    done
+    declare -gA PRESSED=()
     FRAME=0 START=${EPOCHREALTIME/.} TOTALSKIPPED=0 FOCUS=1
 
-
+    # somehow the least painful way to parse this stuff
+    __kittyregex='^..([0-9]*)(;(([^:]*)(:([0-9]*))?))?(.)(.*)'
+    #                <--1--->                                 key code
+    #                        <--------2------------->?
+    #                          <-------3----------->
+    #                           <--4-->                       modifier
+    #                                  <----5---->?
+    #                                    <---6-->             event type
+    #                                                 <7>     final character
+    #                                                    <8-> rest
     nextframe() {
-        local deadline wait=$((1000000/FPS)) now sleep
+        local deadline wait=$((1000000/FPS)) now sleep kittykey
         if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=START+ ++FRAME*wait))); then
             # you fucked up, your game logic can't run at $FPS
             ((deadline=START+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait,TOTALSKIPPED+=SKIPPED))
@@ -125,22 +149,33 @@ gamesetup () {
             __input+=$REPLY now=${EPOCHREALTIME/.}
         done
         INPUT=()
+        ((kitty)) || PRESSED=()
         while [[ $__input ]]; do
             case $__input in
                 [$' \t\n\r\b\177']*) INPUT+=("${__keys[${__input::1}]}") __input=${__input:1} ;;
                 [[:alnum:][:punct:]]*) INPUT+=("${__input::1}") __input=${__input:1} ;;
-                $'\e'*) # handle this separately to avoid making the top level case slower for no reason
-                    case $__input in
-                    $'\e'\[I*) __input=${input:2} FOCUS=1 ;;
-                    $'\e'\[O*) __input=${input:2} FOCUS=0 ;;
-                    $'\e'[[O][ABCD]*) INPUT+=("${__keys[${__input:2:1}]}") __input=${__input:3} ;; # arrow keys
-                    $'\e['*([0-?])*([ -/])[@-~]*) __input=${__input##$'\e['*([0-?])*([ -/])[@-~]} ;; # unsupported csi sequence
-                    $'\e'?('[')) break ;; # assume incomplete csi, hopefully it will be resolved by the next read
-                    $'\e'[^[]*) __input=${__input:2} ;; # something went super wrong and we got an unrecognised sequence
-                    esac ;;
+                $'\e['*([^ABCDEFGHPQSu~])[ABCDEFGHPQSu~]*)
+                    if ((kitty)); then
+                        [[ $__input =~ $__kittyregex ]]
+                        __input=${BASH_REMATCH[8]}
+
+                        kittykey=${__keys[${BASH_REMATCH[1]}${BASH_REMATCH[7]}]}
+                        [[ $kittykey ]] || continue
+                        [[ $kittykey = c && "(${BASH_REMATCH[4]}-1)&4" -ne 0 ]] && exit
+                        ((BASH_REMATCH[6]==3)) && unset 'PRESSED[$kittykey]' || PRESSED[$kittykey]=1
+                        continue
+                    fi ;;&
+                $'\e'\[I*) __input=${input:2} FOCUS=1 ;;
+                $'\e'\[O*) __input=${input:2} FOCUS=0 ;;
+                $'\e'[[O][ABCD]*) INPUT+=("${__keys[${__input:2:1}]}") __input=${__input:3} ;; # arrow keys
+                $'\e['*([0-?])*([ -/])[@-~]*) __input=${__input##$'\e['*([0-?])*([ -/])[@-~]} ;; # unsupported csi sequence
+                $'\e'[^[]*) __input=${__input:2} ;; # something went super wrong and we got an unrecognised sequence
+                $'\e'*) break ;; # assume incomplete csi, hopefully it will be resolved by the next read
+                $'\3'*) exit ;; #^C
                 *) __input=${__input:1} # this was some non ascii unicode character (unsupported for now) or some weird ctrl character
             esac
         done
+        INPUT+=("${!PRESSED[@]}")
         if ((__winch)); then get_term_size; fi
     }
 }

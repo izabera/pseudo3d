@@ -86,7 +86,7 @@ use the arrow keys to rotate and move around, and q to quit
 - [x] decent framerate
 - [x] parallel rendering
 - [x] 24 bit colours
-- [ ] kitty protocol
+- [x] kitty protocol
 - [ ] mouse support
 - [ ] framerate-independent speed
 - [ ] textures
