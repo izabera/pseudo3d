@@ -111,7 +111,7 @@ dumpstats() {
     walkcube 256 '%d;%d;%d'
 
     h=${#hues[@]}
-    for (( i = 0; i < h; i++ )) do
+    for (( i = 0; i < h && h>cols; i++ )) do
         (( i % (h/cols) )) && unset 'hues[i]'
     done
 
