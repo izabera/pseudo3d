@@ -24,7 +24,7 @@
 # this is the dumbest thing i've ever written
 [[ $- = *i* && $- = *m* ]] || exec bash --norc --noediting --noprofile -im +H +o history ./game.bash
 
-mapselect=${mapselect-4}
+mapselect=${mapselect-2}
 source ./maths.bash
 source ./maps.bash
 source ./util.bash
@@ -97,7 +97,8 @@ gamesetup () {
     # size-dependent vars
     update_sizes () {
         # see dumbdrawcol
-        blockhalf=$hblock
+        blockfull=$hblock blockhalf=$hblock
+        for ((i=0;i<rows;i++)) do blockfull+=$sblock; done
         for ((i=0;i<(rows+1)/2;i++)) do blockhalf+=$sblock; done
     }
 
@@ -193,15 +194,14 @@ source ./colours.bash
 #
 # in ${var:start:len} bash will copy the string before extracting the substring
 # so this could use a long string of $'▀\e[D\e[B' as tall as the screen, but that'd be slower
-# really we only need the halfblock where the colour can change, the rest can be spaces
+# instead we use a specialised version that's shorter
 
-#                      <cursor-><--ceiling--><--------wall------->
-alias drawcol='printf "\e[%s;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s"'
-#                      <cursor-><---wall----><-------floor------->
-
+#                      <cursor><--ceiling--><--------wall-------><-------floor------->
+alias drawcol='printf "\e[1;%sH\e[48;5;%sm%s\e[38;5;%s;48;5;%sm%s\e[38;5;%s;48;5;%sm%s"'
 ((truecolor)) && alias drawcol=${BASH_ALIASES[drawcol]//5/2}
 
 # dumb function that doesn't know where the horizon is
+# two versions because one case is painful
 # $1 column
 # $2 colour
 # $3 starting (half)row
@@ -210,30 +210,13 @@ dumbdrawcol () {
     # this does not deal correctly with height == 0, so make sure all walls are close by
 ((hihalf=$3%2,lohalf=($3+$4)%2,
 ceiling=$3/2,
-hiwall=(($4+1)/2-hihalf)/2,
 wall=($4-hihalf-lohalf)/2,
-lowall=wall-hiwall,
-floor=rows-($3/2+hiwall+lowall+hihalf+lohalf)))
-# todo: simplify calc
-
-    # the printing is done with two printfs to mitigate some buffering issues:
-    # when compiled with glibc on linux, bash prints 1024 bytes at a time to
-    # the terminal, which is more than the length of a column if you have more
-    # than ~150 lines (300px).  this means that writes from multiple writers
-    # would be interleaved from the terminal's point of view, and we can't have
-    # someone else steal our cursor while we're printing our column
-    # splitting the print is a cheap workaround for the issue, and it works up
-    # to ~300 lines (600px), way more than the resolution doom runs at, and we
-    # don't need to do extra buffering
+floor=rows-($3/2+wall+hihalf+lohalf)))
     drawcol \
-        1 "$1" \
+        "$1" \
         "$sky"          "${blockhalf:hlen:slen*ceiling}" \
-        "$sky" "$2"     "${blockhalf:hlen*!hihalf:hlen*hihalf+slen*hiwall}"
-
-    drawcol \
-        "$((rows/2+1))" "$1" \
-        "$2"            "${blockhalf:hlen:slen*lowall}" \
-        "$2" "$grass"   "${blockhalf:hlen*!lohalf:hlen*lohalf+slen*floor}"
+        "$sky" "$2"     "${blockfull:hlen*!hihalf:hlen*hihalf+slen*wall}" \
+        "$2"   "$grass" "${blockhalf:hlen*!lohalf:hlen*lohalf+slen*floor}"
 }
 
 
@@ -285,17 +268,19 @@ hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,dist=dist>far?
 declare -A frametimes
 drawframe () {
     ((sync)) && printf '\e[?2026h'
-    frame_start=${EPOCHREALTIME/.}
     if ((NTHR>1)); then
-        dispatch 'drawrays >/dev/tty; printf x'
+        frame_start=${EPOCHREALTIME/.}
+        dispatch 'drawrays > buffered."$tid"; printf x'
         for ((t=0;t<NTHR;t++)) do
             read -rn1 -u"${notify[t]}"
+            read -rd '' 'buffered[t]' < buffered."$t"
         done
+        ((frametimes[$((${EPOCHREALTIME/.}-frame_start))]++))
+        printf %s "${buffered[@]}"
     else
         drawrays
     fi
     ((sync)) && printf '\e[?2026l'
-    ((frametimes[$((${EPOCHREALTIME/.}-frame_start))]++))
 }
 
 run_listeners
