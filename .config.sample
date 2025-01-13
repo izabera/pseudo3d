@@ -1,0 +1,4 @@
+FPS=60
+mapselect=4
+NTHR=8
+UNBUFFERED=1

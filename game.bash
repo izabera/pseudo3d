@@ -48,6 +48,7 @@
 }
 
 mapselect=${mapselect-2}
+[[ -e .config ]] && source ./.config
 source ./maths.bash
 source ./maps.bash
 source ./util.bash
