@@ -160,11 +160,12 @@ gamesetup () {
     #                                    <---6-->             event type
     #                                                 <7>     final character
     #                                                    <8-> rest
+    deltat=$((1000000/FPS))
     nextframe() {
-        local deadline wait=$((1000000/FPS)) now sleep kittykey
-        if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=START+ ++FRAME*wait))); then
+        local deadline now sleep kittykey
+        if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=START+ ++FRAME*deltat))); then
             # you fucked up, your game logic can't run at $FPS
-            ((deadline=START+(FRAME+=(SKIPPED=(now-deadline+wait-1)/wait))*wait,TOTALSKIPPED+=SKIPPED))
+            ((deadline=START+(FRAME+=(SKIPPED=(now-deadline+deltat-1)/deltat))*deltat,TOTALSKIPPED+=SKIPPED))
         fi
         while ((now<deadline)); do
             printf -v sleep 0.%06d "$((deadline-now))"
@@ -332,8 +333,9 @@ while nextframe; do
 
     ((angle+=rspeed,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
     sincos "$angle"
-    ((tx=mx+cos*speed/scale/6,(map[tx/scale*mapw+my/scale]|1)==1&&(mx=tx),
-      ty=my+sin*speed/scale/6,(map[mx/scale*mapw+ty/scale]|1)==1&&(my=ty),
-      speed=speed*3/4,rspeed=rspeed*3/4))
+    # todo: make the maths less stupid
+    ((tx=mx+cos*speed*deltat/scale**2,(map[tx/scale*mapw+my/scale]|1)==1&&(mx=tx),
+      ty=my+sin*speed*deltat/scale**2,(map[mx/scale*mapw+ty/scale]|1)==1&&(my=ty),
+      speed=speed*3**(deltat/15000)/4**(deltat/15000),rspeed=rspeed*3**(deltat/15000)/4**(deltat/15000)))
     drawframe
 done
