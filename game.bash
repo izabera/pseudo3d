@@ -107,7 +107,7 @@ gamesetup () {
             '\e[?25h'   'cursor on' \
             '\e[?1049l' 'alt screen off'
 
-        ((kitty)) && printf %b%.b >/dev/tty '\e[<u'
+        ((kitty)) && printf '\e[<u' >/dev/tty
 
         stty echo sane
         dumpstats
@@ -190,8 +190,8 @@ gamesetup () {
                         ((BASH_REMATCH[6]==3)) && unset 'PRESSED[$kittykey]' || PRESSED[$kittykey]=1
                         continue
                     fi ;;&
-                $'\e'\[I*) __input=${input:2} FOCUS=1 PRESSED=() ;;
-                $'\e'\[O*) __input=${input:2} FOCUS=0 PRESSED=() ;;
+                $'\e['I*) __input=${__input:3} FOCUS=1 PRESSED=() ;;
+                $'\e['O*) __input=${__input:3} FOCUS=0 PRESSED=() ;;
                 $'\e'[[O][ABCD]*) INPUT+=("${__keys[${__input:2:1}]}") __input=${__input:3} ;; # arrow keys
                 $'\e['*([0-?])*([ -/])[@-~]*) __input=${__input##$'\e['*([0-?])*([ -/])[@-~]} ;; # unsupported csi sequence
                 $'\e'[^[]*) __input=${__input:2} ;; # something went super wrong and we got an unrecognised sequence
