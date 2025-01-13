@@ -1,3 +1,15 @@
+aliasing () {
+    # $1 cond
+    # $2 alias name
+    # $3 optional 2nd alias (otherwise, no$2)
+
+    local -i cond=$1
+    ((cond==0)) &&
+        BASH_ALIASES[$2]=    BASH_ALIASES[${3-no$2}]='#' ||
+        BASH_ALIASES[$2]='#' BASH_ALIASES[${3-no$2}]=
+    ((cond==0))
+}
+
 dumpstats() {
     # see tests in https://gist.github.com/izabera/3d1e5dfabbe80b3f5f2e50ec6f56eadb
     END=${EPOCHREALTIME/.}

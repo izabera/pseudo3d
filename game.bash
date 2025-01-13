@@ -228,12 +228,10 @@ floor=rows-($3/2+wall+hihalf+lohalf)))
 # when displaying colours, it also stores the right colour in the variable w
 hit='(side=sdx<sdy)?(sdx+=dx,mapX+=sx):(sdy+=dy,mapY+=sy),'
 
-if [[ $DEPTH ]]; then
+if [[ $DEPTH ]]; aliasing "$?" depthmap; then
     hit+='map[mapX/scale*mapw+mapY/scale]||hit'
-    alias depthmap= nodepthmap='#'
 else
     hit+='(w=map[mapX/scale*mapw+mapY/scale])||hit'
-    alias depthmap='#' nodepthmap=
 fi
 
 far=$((scale*23/2)) # 11.5 steps away is too far too see
@@ -268,28 +266,26 @@ hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,dist=dist>far?
     done
 }
 
-declare -A frametimes
+[[ $UNBUFFERED ]]; aliasing "$?" unbuffered buffered
+((sync)); aliasing "$?" sync
+((NTHR>1)); aliasing "$?" multithread singlethread
 
-if [[ $UNBUFFERED ]]; then
-    alias buffered='#' unbuffered=
-else
-    alias buffered= unbuffered='#'
-fi
+declare -A frametimes
 drawframe () {
     frame_start=${EPOCHREALTIME/.}
-    ((sync)) && printf '\e[?2026h'
-    if ((NTHR>1)); then
-        buffered dispatch 'drawrays > buffered."$tid"; printf x'
-        unbuffered dispatch 'drawrays > /dev/tty; printf x'
-        for ((t=0;t<NTHR;t++)) do
-            read -rn1 -u"${notify[t]}"
-            buffered read -rd '' 'buffered[t]' < buffered."$t"
-        done
-        buffered printf %s "${buffered[@]}"
-    else
-        drawrays
-    fi
-    ((sync)) && printf '\e[?2026l'
+    sync printf '\e[?2026h'
+
+    multithread buffered dispatch 'drawrays > buffered."$tid"; printf x'
+    multithread unbuffered dispatch 'drawrays > /dev/tty; printf x'
+    multithread for ((t=0;t<NTHR;t++)) do
+    multithread     read -rn1 -u"${notify[t]}"
+    multithread     buffered read -rd '' 'buffered[t]' < buffered."$t"
+    multithread done
+    multithread buffered printf %s "${buffered[@]}"
+
+    singlethread drawrays
+
+    sync printf '\e[?2026l'
     ((frametimes[$((${EPOCHREALTIME/.}-frame_start))]++))
 }
 
