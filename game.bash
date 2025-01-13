@@ -22,7 +22,30 @@
 # it is faster in benchmarks so it stays
 #
 # this is the dumbest thing i've ever written
-[[ $- = *i* && $- = *m* ]] || exec bash --norc --noediting --noprofile -im +H +o history ./game.bash
+[[ $- = *i* && $- = *m* ]] || {
+    # since we are re-execing anyway, let's also take care of a couple of other
+    # quality of life improvements:
+    # jemalloc usually makes bash go faster than the glibc malloc
+    for jemalloc in /usr/lib{,64,/x86_64-linux-gnu}/libjemalloc.so; do
+        [[ -e $jemalloc ]] && [[ ! $LD_PRELOAD = *$jemalloc* ]] && {
+            LD_PRELOAD+=${LD_PRELOAD:+:}$jemalloc
+            export LD_PRELOAD
+            break
+        }
+    done
+    # a full column can realistically exceed glibc's default buffering size
+    # this is fine normally but not if our manual buffering is also disabled
+    for stdbuf in /usr/lib{,64,exec,/x86_64-linux-gnu}/coreutils/libstdbuf.so; do
+        [[ -e $stdbuf ]] && [[ ! $LD_PRELOAD = *$stdbuf* ]] && {
+            LD_PRELOAD+=${LD_PRELOAD:+:}$stdbuf
+            export LD_PRELOAD _STDBUF_O=100000
+            break
+        }
+    done
+    # todo: do this on macos (maybe with DYLD_INSERT_LIBRARIES?)
+
+    exec bash --norc --noediting --noprofile -im +H +o history ./game.bash
+}
 
 mapselect=${mapselect-2}
 source ./maths.bash
