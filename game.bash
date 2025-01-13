@@ -290,16 +290,23 @@ hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,dist=dist>far?
 }
 
 declare -A frametimes
+
+if [[ $UNBUFFERED ]]; then
+    alias buffered='#' unbuffered=
+else
+    alias buffered= unbuffered='#'
+fi
 drawframe () {
     frame_start=${EPOCHREALTIME/.}
     ((sync)) && printf '\e[?2026h'
     if ((NTHR>1)); then
-        dispatch 'drawrays > buffered."$tid"; printf x'
+        buffered dispatch 'drawrays > buffered."$tid"; printf x'
+        unbuffered dispatch 'drawrays > /dev/tty; printf x'
         for ((t=0;t<NTHR;t++)) do
             read -rn1 -u"${notify[t]}"
-            read -rd '' 'buffered[t]' < buffered."$t"
+            buffered read -rd '' 'buffered[t]' < buffered."$t"
         done
-        printf %s "${buffered[@]}"
+        buffered printf %s "${buffered[@]}"
     else
         drawrays
     fi
