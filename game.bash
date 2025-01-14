@@ -60,7 +60,13 @@ gamesetup () {
         '\e[m'              'reset colours'        \
         '\e[38;5;123m'      '256 colour fg'        \
         '\e[38;2;45;67;89m' 'truecolor fg'         \
-        '\eP$qm\x1b\\'      'decrqss m'            \
+        '\eP$qm\x1b\\'      'decrqss m'
+
+    # add some delay before da1 to work around alacritty on windows which for
+    # whatever reason replies in the wrong order (da1 before CSI u)
+    sleep .01
+
+    printf %b%.b \
         '\e[c'              'da1'                  \
         '\e[m'              'reset colours again'
 
