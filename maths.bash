@@ -1,9 +1,9 @@
-pi=314159
-scale=100000
-pisq=98696044010
-pi2=628318
-pi_2=157079
-pi_4=78540
+pi=205667
+scale=65536
+pisq=42389628127
+pi2=411775
+pi_2=102944
+pi_4=51472
 
 # bhaskara's formula
 # see accuracy/perf tests here https://gist.github.com/izabera/df0740b7f4544342c142100d90f96814/
