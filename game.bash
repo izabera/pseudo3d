@@ -24,7 +24,7 @@
 # it is faster in benchmarks so it stays
 #
 # this is the dumbest thing i've ever written
-[[ $- = *i* && $- = *m* ]] || exec bash --norc --noediting --noprofile -im +H +o history ./game.bash
+[[ $- = *i* && $- = *m* ]] || exec "$BASH" --norc --noediting --noprofile -im +H +o history ./game.bash
 
 mapselect=${mapselect-2}
 source ./maths.bash
