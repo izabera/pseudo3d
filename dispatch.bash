@@ -10,6 +10,7 @@ dispatch () {
     for fd in "${dispatch[@]}"; do
         echo "$serial; $*" >&"$fd"
     done
+    echo "$serial" > serial
 }
 listener () {
     tid=$1
@@ -17,7 +18,7 @@ listener () {
         eval "$REPLY"
     done
 }
-state=(sin cos mx my)
+state=(sin cos mx my walls{r,g,b}'[2]')
 
 NTHR=${NTHR-4}
 
