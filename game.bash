@@ -267,8 +267,8 @@ hit,dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,dist=dist>far?
         depthmap 24bit  dumbdrawcol "$((x+1))" "$((z=255-22*dist/scale));$z;$z" "$(((rows*2-h)/2))" "$h"
 
         # wall colours
-        nodepthmap 256col dumbdrawcol "$((x+1))" "${col256[w+side*wallcount]}" "$(((rows*2-h)/2))" "$h"
-        nodepthmap 24bit  dumbdrawcol "$((x+1))" "$((wallsr[w+=side*wallcount]*(far-dist)/far));$((wallsg[w]*(far-dist)/far));$((wallsb[w]*(far-dist)/far))" "$(((rows*2-h)/2))" "$h"
+        nodepthmap 256col dumbdrawcol "$((x+1))" "${col256[w*(side*2-1)]}" "$(((rows*2-h)/2))" "$h"
+        nodepthmap 24bit  dumbdrawcol "$((x+1))" "$((wallsr[w*=side*2-1]*(far-dist)/far));$((wallsg[w]*(far-dist)/far));$((wallsb[w]*(far-dist)/far))" "$(((rows*2-h)/2))" "$h"
     done
 }
 

@@ -18,19 +18,14 @@ wallsr=(0  32  34 105 107 155 238 232 202 175)
 wallsg=(0 223 201 195 114  30  85 116 136 229)
 wallsb=(0  20 135 230 230 235 196 123  34  32)
 
-wallcount=${#wallsr[@]}
-
 makecolours ()
-for ((i=0;i<${#walls[@]};i++)) do
-    ((wallsr[i+wallcount]=wallsr[i]*3/4))
-    ((wallsg[i+wallcount]=wallsg[i]*3/4))
-    ((wallsb[i+wallcount]=wallsb[i]*3/4))
+for ((i=1;i<${#walls[@]};i++)) do
+    ((wallsr[-i]=wallsr[i]*3/4))
+    ((wallsg[-i]=wallsg[i]*3/4))
+    ((wallsb[-i]=wallsb[i]*3/4))
 
-    ((col256[i]          =16+(wallsr[i]+28)    /55*6*6+(wallsg[i]+28)    /55*6+(wallsb[i]+28)    /55))
-    ((col256[i+wallcount]=16+(wallsr[i]+28)*3/4/55*6*6+(wallsg[i]+28)*3/4/55*6+(wallsb[i]+28)*3/4/55))
-
-    wallsrgb[i]="${wallsr[i]};${wallsg[i]};${wallsb[i]}"
-    wallsrgb[i+wallcount]="${wallsr[i+wallcount]};${wallsg[i+wallcount]};${wallsb[i+wallcount]}"
+    ((col256[ i]=16+(wallsr[i]+28)    /55*6*6+(wallsg[i]+28)    /55*6+(wallsb[i]+28)    /55))
+    ((col256[-i]=16+(wallsr[i]+28)*3/4/55*6*6+(wallsg[i]+28)*3/4/55*6+(wallsb[i]+28)*3/4/55))
 done
 makecolours
 
