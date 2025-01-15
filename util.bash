@@ -23,6 +23,12 @@ dumpstats() {
     title 'frame stats'
     info 'final resolution' "${cols}x$((rows*2))"
     info 'fps target' "$FPS"
+
+    info 'renderers' "${NTHR-1}"
+    tf=(false true)
+    [[ $UNBUFFERED ]]
+    info 'unbuffered' "${tf[!$?]}"
+
     info 'terminated after frame' "$FRAME"
 
     if ((BENCHMARK)); then
@@ -67,6 +73,23 @@ dumpstats() {
              'but they do not accurately account for any slowness induced by it'
     fi
 
+    title 'shell info'
+    info 'bash path' "$BASH"
+    info 'bash version' "$BASH_VERSION"
+    info 'preload' "${LD_PRELOAD:-<empty>}"
+
+    affinity=$(taskset -pc "$$" 2>/dev/null)
+    affinity=${affinity##*: }
+    info 'cpu affinity' "${affinity:-unknown}"
+
+    # sometimes useful but they don't really need to be accessed at runtime
+    # {
+    #     comment=$(readelf -p .comment "$BASH")
+    #     cmdline=$(readelf -p .GCC.command.line "$BASH")
+    # } 2>/dev/null
+    # info '.comment' "${comment:-empty}"
+    # info '.GCC.command.line' "${cmdline:-empty}"
+
     title 'terminal info'
     info '$TERM' "$TERM"
     info '$COLORTERM' "$COLORTERM"
@@ -78,7 +101,6 @@ dumpstats() {
     fi
     info 'wm class' "$class"
 
-    tf=(false true)
     colours=(256 truecolor)
 
     info colours "${colours[truecolor]}"
