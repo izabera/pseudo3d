@@ -86,12 +86,12 @@ gamesetup () {
     exitfunc () {
         dispatch exit
         wait
+
+        ((kitty)) && printf '\e[<u' >/dev/tty
         printf %b%.b >/dev/tty \
             '\e[?1004l' 'focus off' \
             '\e[?25h'   'cursor on' \
             '\e[?1049l' 'alt screen off'
-
-        ((kitty)) && printf '\e[<u' >/dev/tty
 
         stty echo sane
         dumpstats
