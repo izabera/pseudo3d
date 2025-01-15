@@ -312,14 +312,14 @@ while nextframe; do
     for k in "${INPUT[@]}"; do
         case $k in
             q) break 2 ;;
-            LEFT)  rspeed=$((scale/20));;
-            RIGHT) rspeed=$((-scale/20));;
+            LEFT)  rspeed=$((scale/5));;
+            RIGHT) rspeed=$((-scale/5));;
             UP)   speed=$((scale/2));;
             DOWN) speed=-$((scale/2));;
         esac
     done
 
-    ((angle+=rspeed,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
+    ((angle+=rspeed*deltat/scale,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
     sincos "$angle"
     # todo: make the maths less stupid
     ((tx=mx+cos*speed*deltat/scale**2,(map[tx/scale*mapw+my/scale]|1)==1&&(mx=tx),
