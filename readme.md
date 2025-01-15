@@ -72,7 +72,7 @@ use the arrow keys to rotate and move around, and q to quit
      than 30.  also, microsoft defender is known to do everything it can to tank
      any resemblance of performance, so maybe disable it
 
-- q: it doesn't work on my bash < 5
+- q: it doesn't work on my bash < 5.2
 - a: yep
 
 - q: is this code all pure bash?
@@ -88,7 +88,7 @@ use the arrow keys to rotate and move around, and q to quit
 - [x] 24 bit colours
 - [x] kitty protocol
 - [ ] mouse support
-- [ ] framerate-independent speed
+- [x] framerate-independent speed
 - [ ] textures
 - [ ] sprites
 - [ ] objects/enemies

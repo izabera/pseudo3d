@@ -2,15 +2,11 @@
 # a dispatcher serialises the state of the world (or the changes since the previous frame)
 # and sends commands to each rendering process
 dispatch () {
-    local -n var
-    local serial
-    for var in "${state[@]}"; do
-        serial+="${var@A} "
-    done
+    local serial fd
+    eval "printf -v serial %s\  ${state[*]/*/&=\"\${&@Q\}\"}"
     for fd in "${dispatch[@]}"; do
         echo "$serial; $*" >&"$fd"
     done
-    echo "$serial" > serial
 }
 listener () {
     tid=$1

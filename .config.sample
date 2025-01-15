@@ -1,5 +1,5 @@
-FPS=60
-mapselect=4
+FPS=${FPS-60}
+mapselect=${mapselect-4}
 NTHR=8
 UNBUFFERED=1
 
