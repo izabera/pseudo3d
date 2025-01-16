@@ -310,7 +310,7 @@ speed=0 rspeed=0
 
 
 bomb=4
-addstate walls{r,g,b}\[{$bomb,$((wallcount+bomb))}]{,}
+addstate walls{r,g,b}\[{"$bomb","$((wallcount+bomb))"}]{,}
 
 collision='(map[mx/scale*mapw+my/scale]|1)==1'
 move='t=pos*speed*deltat/scale**2'

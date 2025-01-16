@@ -1,6 +1,6 @@
 # a raycaster in bash
 
-https://github.com/user-attachments/assets/fe561895-eb83-4337-89da-e3ba22bee10b
+https://github.com/user-attachments/assets/59851903-cf4c-4dfc-afae-3c533f6241f7
 
 more screenshots/vidoes at https://imgur.com/a/izas-wolfenstein-bash-journey-bAy5zhp
 
@@ -21,7 +21,7 @@ use the arrow keys to rotate and move around, and q to quit
   representation to dump it to the screen will take longer than a frame
 
 - bash has no floating point support nor access to a library of maths
-  functions. all the maths is done on integers, scaled up by 100000
+  functions. all the maths is done on integers, scaled up by 64k
 
 - terminals are ugly if you use a full character to represent each pixel, so
   this uses unicode half blocks with different foreground and background
