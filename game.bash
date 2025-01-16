@@ -308,8 +308,22 @@ fi
 speed=0 rspeed=0
 
 
-bomb=2
-state+=(walls{r,g,b}\[{$bomb,$((wallcount+bomb))}])
+bomb=4
+addstate walls{r,g,b}\[{$bomb,$((wallcount+bomb))}]{,}
+
+collision='(map[mx/scale*mapw+my/scale]|1)==1'
+move='t=pos*speed*deltat/scale**2'
+smoothing='speed=speed*3**(deltat/15000)/4**(deltat/15000)'
+
+printf -v movement %s, \
+    "${move//pos/mx+cos}" "${collision/mx/t}&&(mx=t)" \
+    "${move//pos/my+sin}" "${collision/my/t}&&(my=t)" \
+    "$smoothing" "${smoothing//speed/rspeed}"
+movement=${movement%,}
+
+bombtimer='wallsg[bomb]=wallsg[bomb+wallcount]=(FRAME*deltat/2500)%255'
+bombtimer+=,${bombtimer//wallsg/wallsb}
+bombtimer+=,'wallsr[bomb]=200,wallsr[bomb+wallcount]=250'
 
 while nextframe; do
     for k in "${INPUT[@]}"; do
@@ -324,13 +338,8 @@ while nextframe; do
 
     ((angle+=rspeed*deltat/scale,angle>=pi2&&(angle-=pi2),angle<0&&(angle+=pi2)))
     sincos "$angle"
-    # todo: make the maths less stupid
-    ((tx=mx+cos*speed*deltat/scale**2,(map[tx/scale*mapw+my/scale]|1)==1&&(mx=tx),
-      ty=my+sin*speed*deltat/scale**2,(map[mx/scale*mapw+ty/scale]|1)==1&&(my=ty),
-      speed=speed*3**(deltat/15000)/4**(deltat/15000),rspeed=rspeed*3**(deltat/15000)/4**(deltat/15000),
-      wallsr[bomb]=200,wallsr[bomb+wallcount]=250,
-      wallsg[bomb]=wallsg[bomb+wallcount]=(FRAME*deltat/2000)%255,
-      wallsb[bomb]=wallsb[bomb+wallcount]=(FRAME*deltat/2000)%255
-    ))
+
+    ((movement,bombtimer))
+
     drawframe
 done

@@ -14,7 +14,10 @@ listener () {
         eval "$REPLY"
     done
 }
-state=(sin cos mx my)
+declare -A state
+addstate () for _ do state[$_]=$_; done
+clearstate () for _ do unset "state[$_]"; done
+addstate sin cos mx my
 
 NTHR=${NTHR-4}
 

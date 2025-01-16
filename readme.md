@@ -96,3 +96,6 @@ use the arrow keys to rotate and move around, and q to quit
 - [ ] sound
 - [ ] better perf
 - [ ] multiplayer
+- [x] dynamic wall colours
+- [ ] dynamic map
+- [x] basic animations effects for walls
