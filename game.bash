@@ -26,7 +26,7 @@
 # this is the dumbest thing i've ever written
 [[ $- = *i* && $- = *m* ]] || exec "$BASH" --norc --noediting --noprofile -im +H +o history ./game.bash
 
-mapselect=${mapselect-2}
+mapselect=${mapselect-4}
 source ./maths.bash
 source ./maps.bash
 source ./util.bash
@@ -309,6 +309,8 @@ speed=0 rspeed=0
 
 
 bomb=2
+state+=(walls{r,g,b}\[{$bomb,$((wallcount+bomb))}])
+
 while nextframe; do
     for k in "${INPUT[@]}"; do
         case $k in
@@ -326,7 +328,9 @@ while nextframe; do
     ((tx=mx+cos*speed*deltat/scale**2,(map[tx/scale*mapw+my/scale]|1)==1&&(mx=tx),
       ty=my+sin*speed*deltat/scale**2,(map[mx/scale*mapw+ty/scale]|1)==1&&(my=ty),
       speed=speed*3**(deltat/15000)/4**(deltat/15000),rspeed=rspeed*3**(deltat/15000)/4**(deltat/15000),
-      wallsr[bomb]=200,wallsg[bomb]=(FRAME*deltat/2000)%255,wallsb[bomb]=(FRAME*deltat/2000)%255
-      ))
+      wallsr[bomb]=200,wallsr[bomb+wallcount]=250,
+      wallsg[bomb]=wallsg[bomb+wallcount]=(FRAME*deltat/2000)%255,
+      wallsb[bomb]=wallsb[bomb+wallcount]=(FRAME*deltat/2000)%255
+    ))
     drawframe
 done

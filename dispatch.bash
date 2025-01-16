@@ -14,7 +14,7 @@ listener () {
         eval "$REPLY"
     done
 }
-state=(sin cos mx my walls{r,g,b}'[2]')
+state=(sin cos mx my)
 
 NTHR=${NTHR-4}
 
