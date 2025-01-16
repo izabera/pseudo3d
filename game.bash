@@ -247,7 +247,7 @@ drawrays () {
 
     for ((x=begin;x<end;x++)) do
 ((cameraX=2*x*scale/cols-scale,
-mapX=mx/scale*scale,mapY=my/scale*scale,
+mapX=mx&mask,mapY=my&mask,
 rdx=cos+planeX*cameraX/scale,
 rdy=sin+planeY*cameraX/scale,
 adX=rdx<0?-rdx:rdx,
@@ -328,7 +328,5 @@ while nextframe; do
       speed=speed*3**(deltat/15000)/4**(deltat/15000),rspeed=rspeed*3**(deltat/15000)/4**(deltat/15000),
       wallsr[bomb]=200,wallsg[bomb]=(FRAME*deltat/2000)%255,wallsb[bomb]=(FRAME*deltat/2000)%255
       ))
-      #map[((FRAME-1)%mapw)*mapw+7]=0
-      #map[(FRAME%mapw)*mapw+7]=3
     drawframe
 done
