@@ -1,6 +1,7 @@
 pi=205667
 scale=65536
-mask=-$scale
+maskf0=-$scale
+mask0f=$((scale-1))
 shift=16
 pisq=42389628127
 pi2=411775
