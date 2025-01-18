@@ -1,7 +1,8 @@
 FPS=${FPS-60}
 mapselect=${mapselect-4}
-NTHR=8
-UNBUFFERED=1
+NTHR=${NTHR-8}
+UNBUFFERED=1 # any non empty string
+MINIMAP=${MINIMAP-asdf} # any non empty string
 
 # jemalloc usually makes bash go faster than the glibc malloc
 for jemalloc in /usr/lib{,64,/x86_64-linux-gnu}/libjemalloc.so; do

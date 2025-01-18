@@ -278,6 +278,7 @@ dist=(side?sdx-dx:sdy-dy)*fov/scale,h=dist<scale?rows*2:rows*2*scale/dist,fdist=
 ((sync)); aliasing "$?" sync
 ((NTHR>1)); aliasing "$?" multithread singlethread
 
+# maybe this should be disabled if sync is off and we're in multithreaded mode
 [[ $MINIMAP ]]; aliasing "$?" minimap
 minimap printf -v minimapfmt '%*s' "$mapw"
 minimap minimapfmt=${minimapfmt// /'\\e[38;2;%d;%d;%d;48;2;%d;%d;%dm▀'}'\r\n'
@@ -301,9 +302,10 @@ drawframe () {
     multithread     buffered read -rd '' 'buffered[t]' < buffered."$t"
     multithread done
     multithread buffered printf %s "${buffered[@]}"
-    minimap printf '\e[1;1H%s' "$tmp"
 
     singlethread drawrays
+
+    minimap printf '\e[1;1H%s' "$tmp"
 
     sync printf '\e[?2026l'
     ((frametimes[$((${EPOCHREALTIME/.}-frame_start))]++))
