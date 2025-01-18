@@ -129,3 +129,9 @@ mapw=23 maph=18
 ((mx=my=scale*3/2))
 angle=$((pi/2))
 fi
+for ((i=0;i<maph;i+=2)) do
+    for ((j=0;j<mapw;j++)) do
+        mapt[q++]=${map[i*mapw+j]}
+        mapt[q++]=${map[(i+1)*mapw+j]}
+    done
+done
