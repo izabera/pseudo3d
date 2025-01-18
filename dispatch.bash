@@ -7,6 +7,9 @@ dispatch () {
     for fd in "${dispatch[@]}"; do
         echo "$serial; $*" >&"$fd"
     done
+    for _ in "${oneshot[@]}"; do
+        unset "state[$_]"
+    done
 }
 listener () {
     tid=$1
@@ -17,6 +20,7 @@ listener () {
 declare -A state
 addstate () for _ do state[$_]=$_; done
 clearstate () for _ do unset "state[$_]"; done
+oneshot () { addstate "$@"; oneshot+=("$@"); }
 addstate sin cos mx my
 
 NTHR=${NTHR-4}

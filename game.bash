@@ -241,9 +241,10 @@ else
 fi
 
 far=$((scale*23/2)) # 11.5 steps away is too far too see
+fov=$scale
 drawrays () {
     # fov depends on aspect ratio
-    ((planeX=sin*cols/(rows*4),planeY=-cos*cols/(rows*4),begin=cols*tid/NTHR,end=cols*(tid+1)/NTHR))
+    ((planeX=sin*fov*cols/(rows*4*scale),planeY=-cos*fov*cols/(rows*4*scale),begin=cols*tid/NTHR,end=cols*(tid+1)/NTHR))
 
     for ((x=begin;x<end;x++)) do
 ((cameraX=2*x*scale/cols-scale,
@@ -257,7 +258,7 @@ dy=rdy?scale*scale/adY:inf,
 rdx<0?(sx=-scale,sdx=(mx-mapX)*dx/scale):(sx=scale,sdx=(mapX+scale-mx)*dx/scale),
 rdy<0?(sy=-scale,sdy=(my-mapY)*dy/scale):(sy=scale,sdy=(mapY+scale-my)*dy/scale),
 hit,w=(w+side*wallcount)&mask0f,
-dist=side?sdx-dx:sdy-dy,h=dist<scale?rows*2:rows*2*scale/dist,fdist=far-(dist>far?far:dist)))
+dist=(side?sdx-dx:sdy-dy)*fov/scale,h=dist<scale?rows*2:rows*2*scale/dist,fdist=far-(dist>far?far:dist)))
 
         # this is not at all how light works but it looks ok
         # dist 0 -> colour 100%
@@ -311,6 +312,7 @@ speed=0 rspeed=0
 
 bomb=4
 addstate walls{r,g,b}\[{"$bomb","$((wallcount+bomb))"}]{,}
+addstate fov
 
 collision='(map[mx/scale*mapw+my/scale]|1)==1'
 move='t=pos*speed*deltat/scale**2'
@@ -326,14 +328,26 @@ bombtimer='wallsg[bomb]=wallsg[bomb+wallcount]=(FRAME*deltat/2500)%255'
 bombtimer+=,${bombtimer//wallsg/wallsb}
 bombtimer+=,'wallsr[bomb]=200,wallsr[bomb+wallcount]=250'
 
+((
+scale_2=scale/2,
+scale_5=scale/5,
+scale_10=scale/10,
+scale_100=scale/100,
+scale2=scale*2,
+scale5=scale*5,
+scale10=scale*10,
+scale100=scale*100
+))
 while nextframe; do
     for k in "${INPUT[@]}"; do
         case $k in
             q) break 2 ;;
-            LEFT)  rspeed=$((scale/5));;
-            RIGHT) rspeed=$((-scale/5));;
-            UP)   speed=$((scale/2));;
-            DOWN) speed=-$((scale/2));;
+            LEFT)  rspeed=$scale_5;;
+            RIGHT) rspeed=-$scale_5;;
+            UP)   speed=$scale_2;;
+            DOWN) speed=-$scale_2;;
+            j) ((fov<scale2&&(fov=fov*105/100))); oneshot fov ;;
+            k) ((fov>scale_5&&(fov=fov*95/100))); oneshot fov ;;
         esac
     done
 
