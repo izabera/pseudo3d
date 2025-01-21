@@ -134,10 +134,15 @@ envelope=${envelope//[[:space:]]}
    ssamples = samples * scale
 ))
 
-calc='cos[(x=(freq*pi2*t/ssamples)%pi2)/pi_2]'
+harmonics="sample+=cos[(x=(freq*pi2*t/ssamples)%pi2)/pi_2]"
+hnum=${hnum-4}
+for ((i=2;i<=hnum;i++)) do
+    harmonics+=",sample+=cos[(x=($i*freq*pi2*t/ssamples)%pi2)/pi_2]/$((2**(i-1)))"
+done
 
 IFS=+
 set -f
+
 for note in "${song[@]}"; do
     [[ $note =~ ([^:]*)(:(.*))? ]]
 
@@ -152,7 +157,7 @@ for note in "${song[@]}"; do
     for ((j=0;j<notel;j++,t++)) do
         sample=0
         for freq in "${freqs[@]}"; do
-            ((sample+=cos[(x=(freq*pi2*t/ssamples)%pi2)/pi_2]))
+            ((harmonics))
         done
 
         printf %b "${binary[$((sample*envelope/scale/10))]}"
