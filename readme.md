@@ -86,17 +86,17 @@ use the arrow keys to rotate and move around, and q to quit
 - [x] decent framerate
 - [x] parallel rendering
 - [x] 24 bit colours
-- [x] kitty protocol
+- [x] kitty keyboard protocol
 - [ ] mouse support
 - [x] framerate-independent speed
 - [ ] textures
 - [ ] sprites
 - [ ] objects/enemies
 - [ ] particles
-- [ ] sound
+- [x] sound (VERY EARLY PROTOTYPE)
 - [ ] better perf
 - [ ] multiplayer
 - [x] dynamic wall colours
-- [x] dynamic map (it technically is but no events that change it at the moment)
+- [x] dynamic map (it technically is but no events change it at the moment)
 - [x] basic animations effects for walls
 - [x] basic on-screen minimap

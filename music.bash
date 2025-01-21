@@ -1,5 +1,6 @@
 #!/bin/bash
 
+(($#)) && song=("$@") ||
 song=(
     # für elise
     e5:50 ds5:50 e5:50 ds5:50  e5:50  b4:50 d5:50 c5:50  a4:150
@@ -83,7 +84,7 @@ cos=(
 )
 
 
-umax=$((64*1024-1))
+umax=$((64*1024))
 
 declare -A binary
 for ((i=0;i<umax;i++)) do
