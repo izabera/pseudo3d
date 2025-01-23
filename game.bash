@@ -55,6 +55,8 @@ gamesetup () {
         '\e[?1004h'         'report focus'         \
         '\e[m'              'reset colours'        \
         '\e[2J'             'erase screen'         \
+        '\e[9999;9999H'     'move to bottom right' \
+        '\e[6n'             'query position'       \
         '\e[?u'             'kitty kbd proto'      \
         '\e[?2026$p'        'synchronised output'  \
         '\e[38;5;123m'      '256 colour fg'        \
@@ -111,13 +113,14 @@ gamesetup () {
 
     get_term_size() {
         __winch=0
-        printf '\e[%s\e[6n' '9999;9999H'
-        IFS='[;' read -rdR _ rows cols
+        rows=${1%;*} cols=${1#*;}
         dispatch "${rows@A} ${cols@A}"
         update_sizes
         dispatch update_sizes
     }
-    get_term_size
+
+    REPLY=${REPLY%%R*} REPLY=${REPLY##*$'\e['}
+    get_term_size "$REPLY"
     trap __winch=1 WINCH
 
     declare -gA __keys=(
@@ -146,14 +149,15 @@ gamesetup () {
     #                                                    <8-> rest
     deltat=$((1000000/FPS))
     nextframe() {
-        local deadline now sleep kittykey
+        local deadline now tmout tmp
+        if ((__winch)); then printf '\e[9999;9999H\e[6n'; fi
         if ((SKIPPED=0,(now=${EPOCHREALTIME/.})>=(deadline=START+ ++FRAME*deltat))); then
             # you fucked up, your game logic can't run at $FPS
             ((deadline=START+(FRAME+=(SKIPPED=(now-deadline+deltat-1)/deltat))*deltat,TOTALSKIPPED+=SKIPPED))
         fi
         while ((now<deadline)); do
-            printf -v sleep 0.%06d "$((deadline-now))"
-            read -t "$sleep" -n1 -d '' -r
+            printf -v tmout 0.%06d "$((deadline-now))"
+            read -t "$tmout" -n1 -d '' -r
             __input+=$REPLY now=${EPOCHREALTIME/.}
         done
         INPUT=()
@@ -162,15 +166,15 @@ gamesetup () {
             case $__input in
                 [$' \t\n\r\b\177']*) INPUT+=("${__keys[${__input::1}]}") __input=${__input:1} ;;
                 [[:alnum:][:punct:]]*) INPUT+=("${__input::1}") __input=${__input:1} ;;
+                $'\e['+([0-9])\;+([0-9])R*) tmp=${__input#$'\e['}; get_term_size "${tmp%%R*}"; __input=${__input#*R} ;;
                 $'\e['*([^ABCDEFGHPQSu~])[ABCDEFGHPQSu~]*)
                     if ((kitty)); then
                         [[ $__input =~ $__kittyregex ]]
                         __input=${BASH_REMATCH[8]}
-
-                        kittykey=${__keys[${BASH_REMATCH[1]}${BASH_REMATCH[7]}]}
-                        [[ $kittykey ]] || continue
-                        [[ $kittykey = c && "(${BASH_REMATCH[4]}-1)&4" -ne 0 ]] && exit
-                        ((BASH_REMATCH[6]==3)) && unset 'PRESSED[$kittykey]' || PRESSED[$kittykey]=1
+                        tmp=${__keys[${BASH_REMATCH[1]}${BASH_REMATCH[7]}]}
+                        [[ $tmp ]] || continue
+                        [[ $tmp = c && "(${BASH_REMATCH[4]}-1)&4" -ne 0 ]] && exit
+                        ((BASH_REMATCH[6]==3)) && unset 'PRESSED[$tmp]' || PRESSED[$tmp]=1
                         continue
                     fi ;;&
                 $'\e['I*) __input=${__input:3} FOCUS=1 PRESSED=() ;;
@@ -184,7 +188,6 @@ gamesetup () {
             esac
         done
         INPUT+=("${!PRESSED[@]}")
-        if ((__winch)); then get_term_size; fi
     }
 }
 
