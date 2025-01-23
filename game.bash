@@ -53,11 +53,10 @@ gamesetup () {
         '\e[?1049h'         'alt screen on'        \
         '\e[?25l'           'cursor off'           \
         '\e[?1004h'         'report focus'         \
-        '\e[H'              'go to 1;1'            \
-        '\e[J'              'erase screen'         \
+        '\e[m'              'reset colours'        \
+        '\e[2J'             'erase screen'         \
         '\e[?u'             'kitty kbd proto'      \
         '\e[?2026$p'        'synchronised output'  \
-        '\e[m'              'reset colours'        \
         '\e[38;5;123m'      '256 colour fg'        \
         '\e[38;2;45;67;89m' 'truecolor fg'         \
         '\eP$qm\x1b\\'      'decrqss m'
