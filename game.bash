@@ -101,14 +101,13 @@ gamesetup () {
 
     hblock=$'▀\e[D\e[B' # halfblock
     sblock=$' \e[D\e[B' # "space"block (yes i'm very good at naming things)
-    hlen=${#hblock} slen=${#sblock}
+    hlen=${#hblock}
 
+    declare -gA column
     # size-dependent vars
     update_sizes () {
         # see dumbdrawcol
-        blockfull=$hblock blockhalf=$hblock
-        for ((i=0;i<rows;i++)) do blockfull+=$sblock; done
-        for ((i=0;i<(rows+1)/2;i++)) do blockhalf+=$sblock; done
+        for ((i=1;i<=rows;i++)) do column[$i]=${column[$((i-1))]}$sblock; done
     }
 
     get_term_size() {
@@ -225,9 +224,9 @@ wall=($4-hihalf-lohalf)/2,
 floor=rows-($3/2+wall+hihalf+lohalf)))
     drawcol \
         "$1" \
-        "$sky"          "${blockhalf:hlen:slen*ceiling}" \
-        "$sky" "$2"     "${blockfull:hlen*!hihalf:hlen*hihalf+slen*wall}" \
-        "$2"   "$grass" "${blockhalf:hlen*!lohalf:hlen*lohalf+slen*floor}"
+        "$sky"          "${column[$ceiling]}" \
+        "$sky" "$2"     "${hblock[!hihalf]}${column[$wall]}" \
+        "$2"   "$grass" "${hblock[!lohalf]}${column[$floor]}"
 }
 
 
