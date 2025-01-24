@@ -284,13 +284,14 @@ dist=(side?sdx-dx:sdy-dy)*fov/scale,h=dist<scale?rows*2:rows*2*scale/dist,fdist=
 minimap printf -v minimapfmt '%*s' "$mapw"
 minimap minimapfmt=${minimapfmt// /'\\e[38;2;%d;%d;%d;48;2;%d;%d;%dm▀'}'\r\n'
 
+exec {outfile}>"${OUTFILE-/dev/tty}"
 declare -A frametimes
 drawframe () {
     frame_start=${EPOCHREALTIME/.}
     sync printf '\e[?2026h'
 
     multithread buffered dispatch 'drawrays > buffered."$tid"; printf x'
-    multithread unbuffered dispatch 'drawrays > /dev/tty; printf x'
+    multithread unbuffered dispatch 'drawrays >&"$outfile"; printf x'
 
     minimap local tmp fmt row=$((mx/scale)) col=$((my/scale)) idx saved
     minimap idx=$((row/2*mapw*2+col*2+row%2)) saved=${mapt[idx]} mapt[idx]=2
@@ -317,7 +318,7 @@ run_listeners
 if ((BENCHMARK)); then
     sincos "$angle"
     START=${EPOCHREALTIME/.}
-    while ((FRAME++<BENCHMARK)); do drawframe; done
+    while ((FRAME++<BENCHMARK)); do drawframe; done >&"$outfile"
     ((FRAME--))
     exit
 fi
@@ -371,5 +372,5 @@ while nextframe; do
 
     ((movement,bombtimer))
 
-    drawframe
+    drawframe >&"$outfile"
 done
