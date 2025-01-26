@@ -26,8 +26,8 @@ for ((i=0;i<${#walls[@]};i++)) do
     ((wallsg[i+wallcount]=wallsg[i]*3/4))
     ((wallsb[i+wallcount]=wallsb[i]*3/4))
 
-    ((col256[i]          =16+(wallsr[i]+28)    /55*6*6+(wallsg[i]+28)    /55*6+(wallsb[i]+28)    /55))
-    ((col256[i+wallcount]=16+(wallsr[i]+28)*3/4/55*6*6+(wallsg[i]+28)*3/4/55*6+(wallsb[i]+28)*3/4/55))
+    ((col256[i]          =16+wallsr[i]    /55*6*6+wallsg[i]    /55*6+wallsb[i]    /55))
+    ((col256[i+wallcount]=16+wallsr[i]*3/4/55*6*6+wallsg[i]*3/4/55*6+wallsb[i]*3/4/55))
 
     wallsrgb[i]="${wallsr[i]};${wallsg[i]};${wallsb[i]}"
     wallsrgb[i+wallcount]="${wallsr[i+wallcount]};${wallsg[i+wallcount]};${wallsb[i+wallcount]}"
