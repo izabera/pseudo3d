@@ -270,7 +270,7 @@ dist=(side?sdx-dx:sdy-dy)*fov/scale,h=dist<scale?rows*2:rows*2*scale/dist,fdist=
         depthmap 24bit  dumbdrawcol "$((x+1))" "$((z=255-22*dist/scale));$z;$z" "$(((rows*2-h)/2))" "$h"
 
         # wall colours
-        nodepthmap 256col dumbdrawcol "$((x+1))" "${col256[w]}" "$(((rows*2-h)/2))" "$h"
+        nodepthmap 256col dumbdrawcol "$((x+1))" "$((16+wallsr[w]*fdist/far/55*6*6+wallsg[w]*fdist/far/55*6+wallsb[w]*fdist/far/55))" "$(((rows*2-h)/2))" "$h"
         nodepthmap 24bit  dumbdrawcol "$((x+1))" "$((wallsr[w]*fdist/far));$((wallsg[w]*fdist/far));$((wallsb[w]*fdist/far))" "$(((rows*2-h)/2))" "$h"
     done
 }
