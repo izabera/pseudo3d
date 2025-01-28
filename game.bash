@@ -55,23 +55,25 @@ gamesetup () {
         '\e[?1004h'         'report focus'         \
         '\e[m'              'reset colours'        \
         '\e[2J'             'erase screen'         \
-        '\e[9999;9999H'     'move to bottom right' \
-        '\e[6n'             'query position'       \
         '\e[?u'             'kitty kbd proto'      \
         '\e[?2026$p'        'synchronised output'  \
         '\e[38;5;123m'      '256 colour fg'        \
         '\e[38;2;45;67;89m' 'truecolor fg'         \
-        '\eP$qm\x1b\\'      'decrqss m'
+        '\eP$qm\x1b\\'      'decrqss m'            \
+        '\e[9999;9999H'     'move to bottom right'
 
-    # add some delay before da1 to work around alacritty on windows which for
-    # whatever reason replies in the wrong order (da1 before CSI u)
+    # this used to query da1 as a flush, intended to get the terminal to reply
+    # *something*, but alacritty on windows sometimes replied with da1 before
+    # csi u, which messes everything else up, so some some small delay was
+    # added as a workaround
+    # todo: test if this also happens with dsr instead of da1
     sleep .01
 
     printf %b%.b \
-        '\e[c'              'da1'                  \
+        '\e[6n'             'query position'       \
         '\e[m'              'reset colours again'
 
-    read -rdc
+    read -rdR
     # see tests in https://gist.github.com/izabera/3d1e5dfabbe80b3f5f2e50ec6f56eadb
     ! [[ $REPLY = *u* ]]; kitty=$?
     ! [[ $REPLY = *'2026;2'* ]]; sync=$?
