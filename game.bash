@@ -63,11 +63,12 @@ gamesetup () {
         '\e[9999;9999H'     'move to bottom right'
 
     # this used to query da1 as a flush, intended to get the terminal to reply
-    # *something*, but alacritty on windows sometimes replied with da1 before
-    # csi u, which messes everything else up, so some some small delay was
-    # added as a workaround
-    # todo: test if this also happens with dsr instead of da1
-    sleep .01
+    # *something*, but alacritty 0.15 on windows sometimes replies with da1
+    # before csi?u, which messes everything else up, so some some small delay
+    # was added as a workaround.  unfortunately it really just seems to be slow
+    # at replying to csi?u.  we can even query dsr multiple times after csi?u,
+    # and get both replies before dsr, so the delay stays
+    sleep .05
 
     printf %b%.b \
         '\e[6n'             'query position'       \
@@ -75,7 +76,7 @@ gamesetup () {
 
     read -rdR
     # see tests in https://gist.github.com/izabera/3d1e5dfabbe80b3f5f2e50ec6f56eadb
-    ! [[ $REPLY = *u* ]]; kitty=$?
+    ! [[ $REPLY = *u* && ! $NOKITTY ]]; kitty=$?
     ! [[ $REPLY = *'2026;2'* ]]; sync=$?
     ! [[ $COLORTERM = *@(24bit|truecolor)* || $REPLY = *38*2*45*67*89*m* ]]; truecolor=$?
 
