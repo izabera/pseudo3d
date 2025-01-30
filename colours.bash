@@ -5,13 +5,11 @@ wallsb=(0  20 135 230 230 235 196 123  34  32)
 
 wallcount=${#wallsr[@]}
 
-makecolours ()
 for ((i=0;i<wallcount*3;i++)) do
     ((wallsr[i+wallcount]=wallsr[i]*3/4))
     ((wallsg[i+wallcount]=wallsg[i]*3/4))
     ((wallsb[i+wallcount]=wallsb[i]*3/4))
 done
-makecolours
 
 if ((truecolor)); then
     if [[ $DEPTH ]]; then

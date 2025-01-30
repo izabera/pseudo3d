@@ -284,8 +284,23 @@ dist=(side?sdx-dx:sdy-dy)*fov/scale,h=dist<scale?rows*2:rows*2*scale/dist,fdist=
 
 # maybe this should be disabled if sync is off and we're in multithreaded mode
 [[ $MINIMAP ]]; aliasing "$?" minimap
-minimap printf -v minimapfmt '%*s' "$mapw"
-minimap minimapfmt=${minimapfmt// /'\\e[38;2;%d;%d;%d;48;2;%d;%d;%dm▀'}'\r\n'
+
+for i in "${!map[@]}"; do
+    mapc[i*3+0]=${wallsr[mapt[i]]}
+    mapc[i*3+1]=${wallsg[mapt[i]]}
+    mapc[i*3+2]=${wallsb[mapt[i]]}
+done
+
+cellfmt=$'\e[38;2;%d;%d;%d;48;2;%d;%d;%dm▀'
+printf -v mapfmt '%*s' "$mapw"
+mapfmt=${mapfmt// /$cellfmt}$'\r\e[B'
+printf -v mapcache "$mapfmt" "${mapc[@]}"
+
+minimap='row=mx/scale,odd=row%2,row=row/2*2,col=my/scale,
+fgidx=row*mapw+col,bgidx=(row+1)*mapw+col,
+fgr=wallsr[odd?map[fgidx]:2],fgg=wallsg[odd?map[fgidx]:2],fgb=wallsb[odd?map[fgidx]:2],
+bgr=wallsr[odd?2:map[bgidx]],bgg=wallsg[odd?2:map[bgidx]],bgb=wallsb[odd?2:map[bgidx]]'
+minimapfmt="%s\e[%dA\e[%dC$cellfmt\e[m"
 
 exec {outfile}>"${OUTFILE-/dev/tty}"
 declare -A frametimes
@@ -296,11 +311,7 @@ drawframe () {
     multithread buffered dispatch 'drawrays > buffered."$tid"; printf x'
     multithread unbuffered dispatch 'drawrays >&"$outfile"; printf x'
 
-    minimap local tmp fmt row=$((mx/scale)) col=$((my/scale)) idx saved
-    minimap idx=$((row/2*mapw*2+col*2+row%2)) saved=${mapt[idx]} mapt[idx]=2
-    minimap printf -v tmp %s "${mapt[@]//*/\${wallsr[&]\} \${wallsg[&]\} \${wallsb[&]\} }"
-    minimap eval "printf -v tmp \"$minimapfmt\" $tmp"
-    minimap mapt[idx]=$saved
+    minimap ((minimap))
 
     multithread for ((t=0;t<NTHR;t++)) do
     multithread     read -rn1 -u"${notify[t]}"
@@ -310,7 +321,7 @@ drawframe () {
 
     singlethread drawrays
 
-    minimap printf '\e[1;1H%s' "$tmp"
+    minimap printf "\e[1;1H$minimapfmt" "$mapcache" "$(((maph-row)/2))" "$col" "$fgr" "$fgg" "$fgb" "$bgr" "$bgg" "$bgb"
 
     sync printf '\e[?2026l'
     ((frametimes[$((${EPOCHREALTIME/.}-frame_start))]++))
