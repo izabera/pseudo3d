@@ -15,7 +15,7 @@ done
 
 # a full column can realistically exceed glibc's default buffering size
 # this is fine normally but not if our manual buffering is also disabled
-for stdbuf in /usr/lib{,64,exec,/x86_64-linux-gnu}/coreutils/libstdbuf.so; do
+for stdbuf in /usr/lib{,64,exec,/*-linux-gnu}/coreutils/libstdbuf.so; do
     [[ -e $stdbuf ]] && [[ ! $LD_PRELOAD = *$stdbuf* ]] && {
         LD_PRELOAD+=${LD_PRELOAD:+:}$stdbuf
         export LD_PRELOAD _STDBUF_O=100000
