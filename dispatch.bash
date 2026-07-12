@@ -10,6 +10,7 @@ dispatch () {
     for _ in "${oneshot[@]}"; do
         unset "state[$_]"
     done
+    oneshot=()
 }
 listener () {
     tid=$1
